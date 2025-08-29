@@ -9,7 +9,7 @@ export function UsageGuide() {
   ];
 
   return (
-    <section className="bg-slate-900 text-white py-20 md:py-28">
+    <section className="bg-gradient-to-r from-blue-700 to-slate-900 text-white py-20 md:py-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Cabeçalho da Seção */}
         <div className="text-center mb-16 md:mb-20">
@@ -27,7 +27,7 @@ export function UsageGuide() {
         {/* Seção de Passos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {steps.map((s) => (
-            <div key={s.step} className="relative bg-slate-800/50 border border-white/10 rounded-xl p-8 overflow-hidden">
+            <div key={s.step} className="relative bg-slate-300/30 border border-white/10 rounded-xl p-8 overflow-hidden">
               <span className="absolute -top-4 -right-4 text-8xl font-bold text-slate-700/50 opacity-50">{s.step}</span>
               <div className="relative z-10">
                 <h3 className="text-2xl font-bold text-white mb-3">{s.title}</h3>

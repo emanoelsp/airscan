@@ -3,7 +3,6 @@ import {
   Gauge,
   Shield,
   Zap,
-  ArrowRight,
   ArrowDown,
 } from "lucide-react";
 

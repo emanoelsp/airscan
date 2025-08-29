@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Menu, X, Activity, ChevronDown } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Menu, X, Activity, ChevronDown } from "lucide-react";
 
 const navigation = [
   { name: "Início", href: "/" },
@@ -28,12 +28,12 @@ const navigation = [
   },
   { name: "Alertas", href: "/alerts" },
   { name: "Sobre", href: "/about" },
-]
+];
 
 export function Header() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
-  const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const pathname = usePathname();
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -46,21 +46,40 @@ export function Header() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold text-gray-900">AIRscan Capivaras</span>
+              <span className="text-xl font-bold text-gray-900">
+                AIRscan Capivaras
+              </span>
               <div className="text-xs text-gray-500">Blumenau, SC</div>
             </div>
           </Link>
 
           {/* Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Login</button>
-            <button className="btn-primary">Comece Agora</button>
+            <Link
+              href="/login"
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium"
+            >
+              Login
+            </Link>
+            <Link
+              href="/startnow"
+              className="hover:text-blue-950 hover:bg-white hover:border-2 hover:border-blue-950 text-white bg-blue-950 rounded-2xl px-3 py-2 text-sm font-medium"
+            >
+              Comece Agora
+            </Link>
           </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-700 hover:text-blue-600 p-2">
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-gray-700 hover:text-blue-600 p-2"
+            >
+              {isOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
         </div>
@@ -73,11 +92,15 @@ export function Header() {
                 <Link
                   href={item.href}
                   className={`text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                    pathname === item.href || (item.submenu && item.submenu.some((sub) => pathname === sub.href))
+                    pathname === item.href ||
+                    (item.submenu &&
+                      item.submenu.some((sub) => pathname === sub.href))
                       ? "text-blue-600"
                       : ""
                   }`}
-                  onMouseEnter={() => item.submenu && setActiveSubmenu(item.name)}
+                  onMouseEnter={() =>
+                    item.submenu && setActiveSubmenu(item.name)
+                  }
                   onMouseLeave={() => setActiveSubmenu(null)}
                 >
                   {item.name}
@@ -149,7 +172,7 @@ export function Header() {
         )}
       </div>
     </header>
-  )
+  );
 }
 
-export default Header
+export default Header;

@@ -43,9 +43,9 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
+      <section className="bg-gradient-to-r from-blue-600 to-slate-900 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">Sobre a AIRscan Capivaras</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">Sobre a <label className="text-yellow-500"> AIRscan </label></h1>
           <p className="text-xl md:text-2xl max-w-3xl mx-auto opacity-90">
             Revolucionando o monitoramento de ar comprimido com tecnologia IoT avançada e inteligência artificial para a
             indústria brasileira
@@ -60,7 +60,7 @@ export default function AboutPage() {
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Nossa Missão</h2>
               <p className="text-lg text-gray-600 mb-6">
-                A AIRscan Capivaras nasceu da necessidade de transformar a gestão de sistemas de ar comprimido na
+                A AIRscan nasceu da necessidade de transformar a gestão de sistemas de ar comprimido na
                 indústria brasileira. Nosso objetivo é fornecer soluções tecnológicas avançadas que permitam às empresas
                 otimizar seus processos, reduzir custos energéticos e aumentar a eficiência operacional.
               </p>
@@ -140,14 +140,18 @@ export default function AboutPage() {
       </section>
 
       {/* Contact Form */}
+      <section className="bg-gradient-to-r from-blue-600 to-slate-900 text-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">Entre em Contato</h1>
+          <p className="text-xl md:text-2xl max-w-3xl mx-auto opacity-90">
+                          Tem alguma dúvida ou quer saber mais sobre nossas soluções? Nossa equipe está pronta para ajudar você.
+
+          </p>
+        </div>
+      </section>
       <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Entre em Contato</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Tem alguma dúvida ou quer saber mais sobre nossas soluções? Nossa equipe está pronta para ajudar você.
-            </p>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+          
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             {/* Contact Info */}
@@ -161,7 +165,7 @@ export default function AboutPage() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900">Email</h4>
-                      <p className="text-gray-600">contato@airscan-capivaras.com.br</p>
+                      <p className="text-gray-600">contato@airscan.com.br</p>
                     </div>
                   </div>
 
