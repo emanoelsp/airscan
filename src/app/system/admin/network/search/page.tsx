@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Search, Filter, Cpu, Activity, Zap, Gauge, Thermometer } from "lucide-react"
-import { db } from "@/lib/firebase"
+import { db } from "@/lib/model/firebase"
 import { collection, getDocs, DocumentData } from "firebase/firestore"
 
 // --- CORREÇÃO 1: Definir interfaces para as estruturas de dados ---

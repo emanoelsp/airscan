@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { BarChartIcon as ChartBar, Brain, Search, Clock } from "lucide-react"
-import { db } from "@/lib/firebase"
+import { db } from "@/lib/model/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { toast } from "react-hot-toast"
 

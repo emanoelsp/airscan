@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Activity, Network as NetworkIcon, Cpu, Database, TrendingUp, CheckCircle, Wifi } from "lucide-react" // Renomeado Network para evitar conflito
-import { db } from "@/lib/firebase"
+import { db } from "@/lib/model/firebase"
 import { collection, getDocs, query, orderBy, limit, DocumentData, Timestamp } from "firebase/firestore"
 
 // --- CORREÇÃO 1: Definir interfaces para as estruturas de dados ---

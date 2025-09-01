@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { db } from "@/lib/firebase"
+import { db } from "@/lib/model/firebase"
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore"
 import { Gauge } from "lucide-react"
 import { toast } from "react-hot-toast"

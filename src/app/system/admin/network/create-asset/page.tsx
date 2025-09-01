@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowRight, Check, Wifi, WifiOff } from "lucide-react"
 import Link from "next/link"
-import { db } from "@/lib/firebase"
+import { db } from "@/lib/model/firebase"
 import { collection, addDoc, getDocs, DocumentData } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 

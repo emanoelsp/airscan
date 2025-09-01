@@ -84,7 +84,7 @@ const adminNav: NavItem[] = [
       { name: "Mensagens", href: "/system/admin/messages" },
     ],
   },
-  { name: "Clientes", href: "/system/admin/clients" },
+  { name: "Clientes", href: "/system/admin/accounts" },
 ]
 
 // --- Componente do Cabeçalho ---
