@@ -1,178 +1,274 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, Activity, ChevronDown } from "lucide-react";
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Menu, X, Activity, ChevronDown, User, Shield } from "lucide-react"
 
-const navigation = [
+// --- CORREÇÃO: Definir tipos específicos para os itens de navegação ---
+interface SubMenuItem {
+  name: string
+  href: string
+}
+
+interface NavItem {
+  name: string
+  href: string
+  submenu?: SubMenuItem[]
+}
+
+// --- Estruturas de Navegação (Agora com tipos) ---
+
+// 1. Navegação Principal (Pública)
+const mainNav: NavItem[] = [
   { name: "Início", href: "/" },
-  { name: "Dashboard", href: "/dashboard" },
+  { name: "Produto", href: "/product" },
+  { name: "Recursos", href: "/resources" },
+  { name: "Empresa", href: "/about" },
+]
+
+// 2. Navegação do Cliente
+const clientNav: NavItem[] = [
+  { name: "Dashboard", href: "/client/dashboard" },
   {
     name: "Rede de Monitoramento",
-    href: "/network",
+    href: "#",
     submenu: [
-      { name: "Criar Nova Rede", href: "/network/create" },
-      { name: "Criar Novo Ativo", href: "/network/create-asset" },
-      { name: "Topologia de Ativos", href: "/network/topology" },
-      { name: "Procurar Ativos", href: "/network/search" },
+      { name: "Topologia da Rede", href: "/client/network/topology" },
+      { name: "Equipamentos da Rede", href: "/client/network/devices" },
     ],
   },
   {
     name: "Análise de Dados",
-    href: "/analysis",
+    href: "#",
     submenu: [
-      { name: "Relatórios de Uso", href: "/analysis/reports" },
-      { name: "Análises com IA", href: "/analysis/ai" },
+      { name: "Relatórios de Consumo", href: "/client/analysis/reports" },
+      { name: "Análises com IA", href: "/client/analysis/ai" },
     ],
   },
-  { name: "Alertas", href: "/alerts" },
-  { name: "Sobre", href: "/about" },
-];
+  {
+    name: "Alertas",
+    href: "#",
+    submenu: [
+      { name: "Painel de Alertas", href: "/client/alerts/panel" },
+      { name: "Configurar Dispositivo", href: "/client/alerts/configure" },
+    ],
+  },
+]
+
+// 3. Navegação do Administrador
+const adminNav: NavItem[] = [
+  { name: "Dashboard", href: "/admin/dashboard" },
+  {
+    name: "Rede de Monitoramento",
+    href: "#",
+    submenu: [
+      { name: "Criar Nova Rede", href: "/admin/network/create-network" },
+      { name: "Criar Novo Equipamento", href: "/admin/network/create-device" },
+    ],
+  },
+  {
+    name: "Análises de Dados",
+    href: "#",
+    submenu: [
+      { name: "Relatórios de Consumo", href: "/admin/analysis/reports" },
+      { name: "Análises com IA", href: "/admin/analysis/ai" },
+    ],
+  },
+  { name: "Tickets", href: "/admin/tickets" },
+  { name: "Solicitações", href: "/admin/requests" },
+  { name: "Mensagens", href: "/admin/messages" },
+  { name: "Clientes", href: "/admin/clients" },
+]
+
+// --- Componente do Cabeçalho ---
 
 export function Header() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-  const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <header className="bg-white shadow-sm sticky top-0 z-50">
+      {/* Container Principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Primeira linha: Logo + Auth */}
-        <div className="flex justify-between items-center h-16 border-b border-gray-100">
-          {/* Logo */}
+        {/* Linha Superior: Logo e Autenticação */}
+        <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="text-xl font-bold text-gray-900">
-                AIRscan Capivaras
-              </span>
+              <span className="text-xl font-bold text-gray-900">AIRscan</span>
               <div className="text-xs text-gray-500">Blumenau, SC</div>
             </div>
           </Link>
 
-          {/* Auth Buttons - Desktop */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Link
-              href="/login"
-              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium"
-            >
+          <div className="hidden md:flex items-center space-x-2">
+            <Link href="/login" className="text-gray-600 hover:text-blue-600 px-4 py-2 text-sm font-medium rounded-md transition-colors">
               Login
             </Link>
-            <Link
-              href="/startnow"
-              className="hover:text-blue-950 hover:bg-white hover:border-2 hover:border-blue-950 text-white bg-blue-950 rounded-2xl px-3 py-2 text-sm font-medium"
-            >
+            <Link href="/startnow" className="bg-blue-600 text-white px-4 py-2 text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
               Comece Agora
             </Link>
           </div>
 
-          {/* Mobile menu button */}
           <div className="md:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700 hover:text-blue-600 p-2"
-            >
-              {isOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+            <button onClick={() => setIsOpen(!isOpen)} className="text-gray-700 p-2">
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
-        {/* Segunda linha: Navigation - Desktop */}
-        <div className="hidden md:block">
-          <nav className="flex space-x-8 h-12 items-center">
-            {navigation.map((item) => (
-              <div key={item.name} className="relative group">
-                <Link
-                  href={item.href}
-                  className={`text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors flex items-center ${
-                    pathname === item.href ||
-                    (item.submenu &&
-                      item.submenu.some((sub) => pathname === sub.href))
-                      ? "text-blue-600"
-                      : ""
-                  }`}
-                  onMouseEnter={() =>
-                    item.submenu && setActiveSubmenu(item.name)
-                  }
-                  onMouseLeave={() => setActiveSubmenu(null)}
-                >
-                  {item.name}
-                  {item.submenu && <ChevronDown className="w-4 h-4 ml-1" />}
-                </Link>
-
-                {/* Submenu */}
-                {item.submenu && activeSubmenu === item.name && (
-                  <div
-                    className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-lg border py-1 z-50"
-                    onMouseEnter={() => setActiveSubmenu(item.name)}
-                    onMouseLeave={() => setActiveSubmenu(null)}
-                  >
-                    {item.submenu.map((subitem) => (
-                      <Link
-                        key={subitem.name}
-                        href={subitem.href}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                      >
-                        {subitem.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {/* Navegação Principal - Desktop */}
+        <div className="hidden md:block border-t border-gray-100">
+          <nav className="flex items-center h-12 space-x-6">
+            {mainNav.map((item) => (
+              <NavLink key={item.name} item={item} />
             ))}
           </nav>
         </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden py-4 border-t">
-            <div className="space-y-2">
-              {navigation.map((item) => (
-                <div key={item.name}>
-                  <Link
-                    href={item.href}
-                    className={`block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 ${
-                      pathname === item.href ? "text-blue-600" : ""
-                    }`}
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                  {item.submenu && (
-                    <div className="ml-4 space-y-1">
-                      {item.submenu.map((subitem) => (
-                        <Link
-                          key={subitem.name}
-                          href={subitem.href}
-                          className="block px-3 py-2 text-sm text-gray-600 hover:text-blue-600"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {subitem.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div className="pt-4 space-y-2 border-t">
-                <button className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
-                  Login
-                </button>
-                <button className="btn-primary w-full">Comece Agora</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Barras de Navegação Condicionais (Cliente e Admin) - Desktop */}
+      {/* OBS: Em uma aplicação real, a exibição destas barras seria controlada pelo status de autenticação do usuário. */}
+      
+      {/* Barra do Cliente */}
+      <div className="hidden md:block bg-slate-50 border-t border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center h-12 space-x-6">
+            <div className="flex items-center text-sm font-semibold text-blue-700">
+              <User className="w-4 h-4 mr-2" />
+              <span>Cliente</span>
+            </div>
+            <div className="w-px h-6 bg-gray-200" />
+            {clientNav.map((item) => (
+              <NavLink key={item.name} item={item} />
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Barra do Admin */}
+      <div className="hidden md:block bg-red-50 border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center h-12 space-x-6">
+             <div className="flex items-center text-sm font-semibold text-red-700">
+              <Shield className="w-4 h-4 mr-2" />
+              <span>Admin</span>
+            </div>
+            <div className="w-px h-6 bg-gray-200" />
+            {adminNav.map((item) => (
+              <NavLink key={item.name} item={item} />
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Menu Mobile */}
+      {isOpen && <MobileMenu closeMenu={() => setIsOpen(false)} />}
     </header>
-  );
+  )
 }
 
-export default Header;
+// --- Sub-componentes ---
+
+// Componente de Link de Navegação (com Submenu)
+// CORREÇÃO: Usar a interface NavItem nas props
+const NavLink = ({ item }: { item: NavItem }) => {
+  const pathname = usePathname()
+  const [isActive, setIsActive] = useState(false)
+  const hasSubmenu = !!item.submenu
+
+  return (
+    <div className="relative" onMouseEnter={() => setIsActive(true)} onMouseLeave={() => setIsActive(false)}>
+      <Link href={item.href} className={`flex items-center text-sm font-medium transition-colors ${pathname === item.href ? "text-blue-600" : "text-gray-600 hover:text-blue-600"}`}>
+        {item.name}
+        {hasSubmenu && <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isActive ? "rotate-180" : ""}`} />}
+      </Link>
+      {hasSubmenu && isActive && (
+        <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-md shadow-lg border py-1 z-50">
+          {item.submenu?.map((subitem) => (
+            <Link key={subitem.name} href={subitem.href} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+              {subitem.name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Componente do Menu Mobile
+const MobileMenu = ({ closeMenu }: { closeMenu: () => void }) => {
+  return (
+    <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t py-4 px-4 sm:px-6 lg:px-8">
+      <div className="space-y-4">
+        {/* Links Principais */}
+        <h3 className="font-semibold text-gray-500 text-sm uppercase tracking-wider">Menu</h3>
+        {mainNav.map((item) => (
+          <Link key={item.name} href={item.href} onClick={closeMenu} className="block text-base font-medium text-gray-700 hover:text-blue-600">
+            {item.name}
+          </Link>
+        ))}
+
+        {/* Links do Cliente */}
+        <div className="border-t pt-4">
+          <h3 className="font-semibold text-gray-500 text-sm uppercase tracking-wider">Cliente</h3>
+          {clientNav.map((item) => (
+            <MobileNavLink key={item.name} item={item} closeMenu={closeMenu} />
+          ))}
+        </div>
+
+        {/* Links do Admin */}
+        <div className="border-t pt-4">
+          <h3 className="font-semibold text-gray-500 text-sm uppercase tracking-wider">Admin</h3>
+          {adminNav.map((item) => (
+            <MobileNavLink key={item.name} item={item} closeMenu={closeMenu} />
+          ))}
+        </div>
+
+        {/* Autenticação */}
+        <div className="border-t pt-4 space-y-2">
+          <Link href="/login" onClick={closeMenu} className="block text-base text-gray-700 hover:text-blue-600">
+            Login
+          </Link>
+          <Link href="/startnow" onClick={closeMenu} className="block w-full text-center bg-blue-600 text-white px-4 py-2 text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+            Comece Agora
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// CORREÇÃO: Usar a interface NavItem nas props
+const MobileNavLink = ({ item, closeMenu }: { item: NavItem; closeMenu: () => void }) => {
+  const [submenuOpen, setSubmenuOpen] = useState(false)
+  const hasSubmenu = !!item.submenu
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasSubmenu) {
+      e.preventDefault()
+      setSubmenuOpen(!submenuOpen)
+    } else {
+      closeMenu()
+    }
+  }
+
+  return (
+    <div>
+      <Link href={item.href} onClick={handleClick} className="flex justify-between items-center py-2 text-base font-medium text-gray-700 hover:text-blue-600">
+        <span>{item.name}</span>
+        {hasSubmenu && <ChevronDown className={`w-5 h-5 transition-transform ${submenuOpen ? "rotate-180" : ""}`} />}
+      </Link>
+      {hasSubmenu && submenuOpen && (
+        <div className="pl-4 border-l-2 ml-2">
+          {item.submenu?.map((subitem) => (
+            <Link key={subitem.name} href={subitem.href} onClick={closeMenu} className="block py-2 text-sm text-gray-600 hover:text-blue-600">
+              {subitem.name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
