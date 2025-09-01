@@ -58,27 +58,33 @@ const clientNav: NavItem[] = [
 
 // 3. Navegação do Administrador
 const adminNav: NavItem[] = [
-  { name: "Dashboard", href: "/admin/dashboard" },
+  { name: "Dashboard", href: "/system/admin/dashboard" },
   {
     name: "Rede de Monitoramento",
     href: "#",
     submenu: [
-      { name: "Criar Nova Rede", href: "/admin/network/create-network" },
-      { name: "Criar Novo Equipamento", href: "/admin/network/create-device" },
+      { name: "Criar Nova Rede", href: "/system/admin/network/create-network" },
+      { name: "Criar Novo Equipamento", href: "/system/admin/network/create-device" },
     ],
   },
   {
     name: "Análises de Dados",
     href: "#",
     submenu: [
-      { name: "Relatórios de Consumo", href: "/admin/analysis/reports" },
-      { name: "Análises com IA", href: "/admin/analysis/ai" },
+      { name: "Relatórios de Consumo", href: "/system/admin/analysis/reports" },
+      { name: "Análises com IA", href: "/system/admin/analysis/ai" },
     ],
   },
-  { name: "Tickets", href: "/admin/tickets" },
-  { name: "Solicitações", href: "/admin/requests" },
-  { name: "Mensagens", href: "/admin/messages" },
-  { name: "Clientes", href: "/admin/clients" },
+  {
+    name: "Suporte",
+    href: "#",
+    submenu: [
+      { name: "Chamados", href: "/system/admin/tickets" },
+      { name: "Orçamentos", href: "/system/admin/requests" },
+      { name: "Mensagens", href: "/system/admin/messages" },
+    ],
+  },
+  { name: "Clientes", href: "/system/admin/clients" },
 ]
 
 // --- Componente do Cabeçalho ---
@@ -130,7 +136,7 @@ export function Header() {
 
       {/* Barras de Navegação Condicionais (Cliente e Admin) - Desktop */}
       {/* OBS: Em uma aplicação real, a exibição destas barras seria controlada pelo status de autenticação do usuário. */}
-      
+
       {/* Barra do Cliente */}
       <div className="hidden md:block bg-slate-50 border-t border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,7 +157,7 @@ export function Header() {
       <div className="hidden md:block bg-red-50 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex items-center h-12 space-x-6">
-             <div className="flex items-center text-sm font-semibold text-red-700">
+            <div className="flex items-center text-sm font-semibold text-red-700">
               <Shield className="w-4 h-4 mr-2" />
               <span>Admin</span>
             </div>
