@@ -26,10 +26,13 @@ export interface Solicitation {
   shutdownImpact: string;
   status: "new" | "replied";
   createdAt: Timestamp;
+  // Novos campos para a resposta
+  replyMessage?: string;
+  repliedAt?: Timestamp;
 }
 
 // Tipo para dados de criação, antes de irem para o DB
-export type SolicitationData = Omit<Solicitation, "id" | "status" | "createdAt">;
+export type SolicitationData = Omit<Solicitation, "id" | "status" | "createdAt" | "replyMessage" | "repliedAt">;
 
 const SOLICITATIONS_COLLECTION = "airscan_solicitations";
 
@@ -76,15 +79,19 @@ const solicitationsController = {
   },
 
   /**
-   * Atualiza o status de uma solicitação para 'replied'.
+   * Atualiza o status de uma solicitação para 'replied' e adiciona a mensagem de resposta.
    */
-  markAsReplied: async (solicitationId: string): Promise<void> => {
+  replyToSolicitation: async (solicitationId: string, replyMessage: string): Promise<void> => {
     try {
       const docRef = doc(db, SOLICITATIONS_COLLECTION, solicitationId);
-      await updateDoc(docRef, { status: "replied" });
+      await updateDoc(docRef, { 
+        status: "replied",
+        replyMessage: replyMessage,
+        repliedAt: serverTimestamp()
+      });
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
-      throw new Error("Não foi possível marcar como respondida.");
+      throw new Error("Não foi possível salvar a resposta.");
     }
   },
   

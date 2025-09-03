@@ -1,13 +1,15 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/lib/controllers/authcontroller";
-import networkController, { NetworkTopology, Asset } from "@/lib/controllers/networkcontroller";
-import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2 } from "lucide-react";
-import * as AccountAlerts from "@/components/allerts/accountsallert";
-import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/controllers/authcontroller"
+import networkController, { NetworkTopology, Asset } from "@/lib/controllers/networkcontroller"
+import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Share2 } from "lucide-react"
+import * as AccountAlerts from "@/components/allerts/accountsallert"
+import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts'
+import { db } from "@/lib/model/firebase"
+import { collection, query, where, getDocs } from "firebase/firestore"
 
 // --- INTERFACES ---
 interface RealTimeMetrics {
@@ -15,7 +17,7 @@ interface RealTimeMetrics {
   lastUpdate: string;
 }
 
-// --- COMPONENTES ---
+// --- SUB-COMPONENTES ---
 
 function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedAsset: Asset | null, onSelect: (asset: Asset) => void }) {
   const getAssetIcon = (type: string) => {
@@ -52,45 +54,57 @@ function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedA
   );
 }
 
-export default function ViewNetworkPage() {
+// --- PÁGINA PRINCIPAL ---
+export default function ClientTopologyPage() {
   const router = useRouter();
-  const params = useParams();
   const { account, loading: authLoading } = useAuth();
   
-  const networkId = params.id as string;
-
   const [network, setNetwork] = useState<NetworkTopology | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [realTimeData, setRealTimeData] = useState<RealTimeMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Efeito para carregar os dados da rede do cliente
   useEffect(() => {
-    if (!authLoading && account?.role !== 'admin') {
-      router.push('/login');
-    }
-  }, [account, authLoading, router]);
+    if (authLoading || !account) return;
 
-  useEffect(() => {
-    if (networkId) {
-      const loadNetwork = async () => {
-        try {
-          const topologyData = await networkController.getNetworkTopology(networkId);
-          setNetwork(topologyData);
-          if (topologyData?.assets && topologyData.assets.length > 0) {
-            setSelectedAsset(topologyData.assets[0]);
-          }
-        } catch {
-          AccountAlerts.showError("Falha ao carregar dados da rede.");
-        } finally {
-          setLoading(false);
+    const loadClientNetwork = async () => {
+      try {
+        // Encontra a rede associada ao cliente logado
+        const networksRef = collection(db, "airscan_networks");
+        const q = query(networksRef, where("clientId", "==", account.id), where("status", "==", "active"));
+        const networkSnapshot = await getDocs(q);
+
+        if (networkSnapshot.empty) {
+          // Cliente não tem uma rede ativa
+          setNetwork(null); 
+          return;
         }
-      };
-      loadNetwork();
-    }
-  }, [networkId]);
 
+        // Pega a primeira rede encontrada
+        const clientNetwork = networkSnapshot.docs[0];
+        const topologyData = await networkController.getNetworkTopology(clientNetwork.id);
+        
+        setNetwork(topologyData);
+        if (topologyData?.assets && topologyData.assets.length > 0) {
+          // Seleciona o primeiro ativo por padrão
+          setSelectedAsset(topologyData.assets[0]);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados da rede do cliente:", error);
+        AccountAlerts.showError("Falha ao carregar os dados da sua rede.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadClientNetwork();
+  }, [account, authLoading]);
+
+
+  // Efeito para buscar dados da API em tempo real
   useEffect(() => {
-    setRealTimeData(null);
+    setRealTimeData(null); // Reseta ao trocar de ativo
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
     }
@@ -111,16 +125,14 @@ export default function ViewNetworkPage() {
             });
         } else {
             console.error("Resposta da API inválida.", data);
-            setRealTimeData(prev => ({ ...(prev || { pressure: 0 }), lastUpdate: "Dado inválido" })); 
         }
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-        setRealTimeData(prev => ({ ...(prev || { pressure: 0 }), lastUpdate: "Falha" })); 
+        console.error("Erro ao buscar dados da API:", error);
       }
     };
 
     fetchRealTimeData();
-    const interval = setInterval(fetchRealTimeData, 5000);
+    const interval = setInterval(fetchRealTimeData, 5000); // Atualiza a cada 5 segundos
     return () => clearInterval(interval);
   }, [selectedAsset]);
 
@@ -135,11 +147,12 @@ export default function ViewNetworkPage() {
   if (!network) {
     return (
        <main className="relative min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center text-center p-4">
-        <h2 className="text-xl font-bold text-red-400">Rede Não Encontrada</h2>
-        <p className="text-slate-300 mt-2">A rede que você está procurando não existe ou foi removida.</p>
-        <Link href="/system/admin/network" className="mt-6 flex items-center text-blue-400 hover:text-blue-300 font-medium">
+        <Share2 className="w-16 h-16 text-slate-600 mb-4" />
+        <h2 className="text-xl font-bold text-slate-300">Nenhuma Rede Ativa Encontrada</h2>
+        <p className="text-slate-400 mt-2">Parece que você ainda não tem uma rede de monitoramento ativa.</p>
+        <Link href="/system/client/dashboard" className="mt-6 flex items-center text-blue-400 hover:text-blue-300 font-medium">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar para a Lista de Redes
+            Voltar para o Dashboard
         </Link>
       </main>
     );
@@ -152,18 +165,18 @@ export default function ViewNetworkPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
         <div className="relative z-10 max-w-7xl mx-auto">
             <div className="mb-8">
-                <Link href="/system/admin/network" className="flex items-center text-blue-400 hover:text-blue-300 mb-4">
+                <Link href="/system/client/dashboard" className="flex items-center text-blue-400 hover:text-blue-300 mb-4">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar para Lista de Redes
+                    Voltar para o Dashboard
                 </Link>
                 <h1 className="text-3xl font-bold text-slate-100">{network.name}</h1>
-                <p className="text-slate-300">{network.clientCompanyName} - {network.clientContactName}</p>
+                <p className="text-slate-300">Topologia da sua rede de monitoramento.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Topology View */}
                 <div className="lg:col-span-2 bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 min-h-[500px] lg:min-h-[600px]">
-                    <h2 className="text-xl font-semibold text-slate-100 mb-4">Topologia da Rede</h2>
+                    <h2 className="text-xl font-semibold text-slate-100 mb-4">Mapa da Rede</h2>
                     <div className="relative bg-slate-900/50 rounded-lg w-full h-[400px] lg:h-[500px] overflow-auto border border-white/10">
                         {network.assets.map(asset => (
                             <AssetNode key={asset.id} asset={asset} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
@@ -181,12 +194,10 @@ export default function ViewNetworkPage() {
                             <p className="text-sm text-slate-400 capitalize">{selectedAsset.type} - {selectedAsset.model || 'N/A'}</p>
                         </div>
                         <div className={`p-3 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                            selectedAsset.status === 'online' ? 'bg-green-500/10 text-green-400' : 
-                            selectedAsset.status === 'warning' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-red-500/10 text-red-400'
+                            selectedAsset.status === 'online' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                         }`}>
                             <div className={`w-3 h-3 rounded-full ${
-                                selectedAsset.status === 'online' ? 'bg-green-400' :
-                                selectedAsset.status === 'warning' ? 'bg-yellow-400' : 'bg-red-400'
+                                selectedAsset.status === 'online' ? 'bg-green-400' : 'bg-red-400'
                             }`}></div>
                             Status: {selectedAsset.status.charAt(0).toUpperCase() + selectedAsset.status.slice(1)}
                         </div>
@@ -197,24 +208,16 @@ export default function ViewNetworkPage() {
                             {realTimeData ? (
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
-                                    <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
-                                        <Gauge className="w-5 h-5 text-blue-400"/>
-                                        <span>Pressão Atual</span>
-                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-slate-300 font-medium"><Gauge className="w-5 h-5 text-blue-400"/><span>Pressão Atual</span></div>
                                     <p className="font-bold text-lg text-blue-400">{realTimeData.pressure.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
                                 </div>
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
-                                    <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
-                                        <Clock className="w-5 h-5 text-slate-400"/>
-                                        <span>Última Atualização</span>
-                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-slate-300 font-medium"><Clock className="w-5 h-5 text-slate-400"/><span>Última Atualização</span></div>
                                     <p className="font-semibold text-slate-200">{realTimeData.lastUpdate}</p>
                                 </div>
-                                {/* GAUGE */}
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
-                                            {/* CORREÇÃO: Cast para 'any' para evitar o erro de tipo, mantendo o fallback. */}
                                             <PolarAngleAxis type="number" domain={[0, (selectedAsset as any).maxPressure || 10]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
                                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressure.toFixed(2)}</text>
@@ -223,19 +226,14 @@ export default function ViewNetworkPage() {
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                            ) : (
-                                <p className="text-sm text-slate-400 text-center py-4">Aguardando dados da API...</p>
-                            )}
+                            ) : (<p className="text-sm text-slate-400 text-center py-4">Aguardando dados da API...</p>)}
                         </div>
                         )}
                     </div>
-                    ) : (
-                        <p className="text-center text-slate-400 py-8">Selecione um ativo no mapa para ver os detalhes.</p>
-                    )}
+                    ) : (<p className="text-center text-slate-400 py-8">Selecione um ativo no mapa para ver os detalhes.</p>)}
                 </div>
             </div>
         </div>
     </main>
   )
 }
-

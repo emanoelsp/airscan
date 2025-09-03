@@ -1,137 +1,128 @@
-import Link from "next/link"
-import { Plus, Search, TriangleIcon as Topology } from "lucide-react"
+"use client"
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Plus, Search, Share2 as Topology, Wifi, WifiOff, ArrowRight, Loader2 } from "lucide-react";
+import networkController, { NetworkSummary } from "@/lib/controllers/networkcontroller";
+
+// --- SUB-COMPONENTES ---
+
+// Card para as ações principais
+function ActionCard({ href, icon: Icon, title, description, color }: { href: string; icon: any; title: string; description: string; color: string; }) {
+  const colorClasses = {
+    blue: "bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-400",
+    orange: "bg-orange-500/10 group-hover:bg-orange-500/20 text-orange-400",
+    green: "bg-green-500/10 group-hover:bg-green-500/20 text-green-400",
+    purple: "bg-purple-500/10 group-hover:bg-purple-500/20 text-purple-400",
+  };
+  const arrowColorClasses = {
+    blue: "text-blue-400 group-hover:text-blue-300",
+    orange: "text-orange-400 group-hover:text-orange-300",
+    green: "text-green-400 group-hover:text-green-300",
+    purple: "text-purple-400 group-hover:text-purple-300",
+  };
+  return (
+    <Link href={href} className="group block bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 transition-all hover:border-white/20 hover:scale-[1.02]">
+      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-colors ${colorClasses[color as keyof typeof colorClasses]}`}>
+        <Icon className="w-8 h-8" />
+      </div>
+      <h3 className="text-xl font-semibold text-slate-100 mb-2">{title}</h3>
+      <p className="text-slate-400 text-sm mb-4 h-16">{description}</p>
+      <div className={`font-semibold flex items-center gap-2 transition-colors ${arrowColorClasses[color as keyof typeof arrowColorClasses]}`}>
+        Acessar <ArrowRight className="w-4 h-4" />
+      </div>
+    </Link>
+  );
+}
+
+// Card para redes existentes
+function ExistingNetworkCard({ network }: { network: NetworkSummary }) {
+    return (
+        <Link href={`/system/admin/network/view-network/${network.id}`} className="group block bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 flex flex-col transition-all hover:border-white/20 hover:scale-[1.02]">
+            <div className="flex justify-between items-start flex-grow">
+                <h3 className="text-lg font-semibold text-slate-100 group-hover:text-blue-400">{network.name}</h3>
+                <div className={`px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                    network.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-slate-400/10 text-slate-400'
+                }`}>
+                    {network.status === 'active' ? 'Ativa' : 'Inativa'}
+                </div>
+            </div>
+            <p className="text-sm text-slate-400 mt-1 mb-4">{network.clientCompanyName}</p>
+            <div className="mt-auto pt-4 border-t border-white/10 flex justify-around text-center">
+                <div>
+                    <p className="font-bold text-lg text-green-400">{network.activeAssets}</p>
+                    <p className="text-xs text-slate-400">Online</p>
+                </div>
+                <div>
+                    <p className="font-bold text-lg text-red-400">{network.inactiveAssets}</p>
+                    <p className="text-xs text-slate-400">Offline</p>
+                </div>
+                <div>
+                    <p className="font-bold text-lg text-slate-200">{network.totalAssets}</p>
+                    <p className="text-xs text-slate-400">Total</p>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
 
 export default function NetworkPage() {
+  const [networks, setNetworks] = useState<NetworkSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const summaries = await networkController.getNetworkSummaries();
+        setNetworks(summaries);
+      } catch (error) {
+        console.error("Failed to load networks:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Rede de Monitoramento</h1>
-          <p className="text-gray-600">Gerencie suas redes de monitoramento e ativos conectados</p>
+    <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
+      <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-100">Rede de Monitoramento</h1>
+          <p className="text-slate-300 mt-2 text-lg">Gerencie suas redes e ativos conectados.</p>
         </div>
 
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Criar Nova Rede */}
-          <Link href="/system/admin/network/create-network" className="group">
-            <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
-              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
-                <Plus className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Criar Nova Rede</h3>
-              <p className="text-gray-600 mb-4">
-                Configure uma nova rede de monitoramento para seus compressores de ar comprimido
-              </p>
-              <div className="text-blue-600 font-medium group-hover:text-blue-700">Começar configuração →</div>
-            </div>
-          </Link>
-
-          {/* Criar Novo Ativo */}
-          <Link href="/system/admin/assets/create-asset" className="group">
-            <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
-              <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
-                <Plus className="w-8 h-8 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Criar Novo Ativo</h3>
-              <p className="text-gray-600 mb-4">Adicione um novo ativo de ar comprimido a uma rede existente</p>
-              <div className="text-orange-600 font-medium group-hover:text-orange-700">Adicionar ativo →</div>
-            </div>
-          </Link>
-
-          {/* Topologia de Ativos */}
-          <Link href="/system/admin/network/search-network" className="group">
-            <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
-              <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-green-200 transition-colors">
-                <Topology className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Procurar Redes</h3>
-              <p className="text-gray-600 mb-4">
-                Visualize a topologia completa dos seus ativos monitorados em tempo real
-              </p>
-              <div className="text-green-600 font-medium group-hover:text-green-700">Buscar topologia →</div>
-            </div>
-          </Link>
-
-          {/* Procurar Ativos */}
-          <Link href="/network/search" className="group">
-            <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
-              <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-200 transition-colors">
-                <Search className="w-8 h-8 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Procurar Ativos</h3>
-              <p className="text-gray-600 mb-4">
-                Encontre ativos específicos por nome, tipo ou descrição e monitore em tempo real
-              </p>
-              <div className="text-purple-600 font-medium group-hover:text-purple-700">Buscar ativos →</div>
-            </div>
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <ActionCard href="/system/admin/network/create-network" icon={Plus} title="Criar Nova Rede" description="Configure uma nova rede de monitoramento do zero." color="blue"/>
+          <ActionCard href="/system/admin/assets/create-asset" icon={Plus} title="Criar Novo Ativo" description="Adicione um novo equipamento a uma rede existente." color="orange"/>
+          <ActionCard href="/system/admin/network/search-network" icon={Topology} title="Procurar Redes" description="Visualize a topologia completa dos seus ativos monitorados." color="green"/>
+          <ActionCard href="/system/admin/assets" icon={Search} title="Procurar Ativos" description="Encontre e gerencie ativos específicos por nome ou tipo." color="purple"/>
         </div>
 
-        {/* Redes Existentes */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Redes Existentes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                name: "Fábrica Principal",
-                devices: 15,
-                status: "online",
-                efficiency: 96.2,
-                lastUpdate: "2 min atrás",
-              },
-              {
-                name: "Unidade Norte",
-                devices: 12,
-                status: "online",
-                efficiency: 94.8,
-                lastUpdate: "1 min atrás",
-              },
-              {
-                name: "Linha de Produção B",
-                devices: 8,
-                status: "warning",
-                efficiency: 92.1,
-                lastUpdate: "5 min atrás",
-              },
-            ].map((network, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm border">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{network.name}</h3>
-                  <div
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      network.status === "online"
-                        ? "status-online"
-                        : network.status === "warning"
-                          ? "status-warning"
-                          : "status-offline"
-                    }`}
-                  >
-                    {network.status === "online" ? "Online" : network.status === "warning" ? "Atenção" : "Offline"}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Dispositivos:</span>
-                    <span className="font-medium">{network.devices}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Eficiência:</span>
-                    <span className="font-medium">{network.efficiency}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Última atualização:</span>
-                    <span className="text-sm text-gray-500">{network.lastUpdate}</span>
-                  </div>
-                </div>
-                <button className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-medium transition-colors">
-                  Ver Detalhes
-                </button>
-              </div>
-            ))}
+        <div className="mt-16">
+          <div className="flex items-center gap-3 mb-6">
+            <Wifi className="w-6 h-6 text-slate-300" />
+            <h2 className="text-2xl font-semibold text-slate-100">Redes Existentes</h2>
           </div>
+          {isLoading ? (
+             <div className="flex justify-center items-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-yellow-400"/>
+             </div>
+          ) : networks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {networks.map((network) => (
+                <ExistingNetworkCard key={network.id} network={network} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl">
+              <p className="text-slate-400">Nenhuma rede encontrada no sistema.</p>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  )
+    </main>
+  );
 }

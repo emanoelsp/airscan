@@ -100,7 +100,10 @@ export default function GetStartedPage() {
     event.preventDefault();
     setIsSubmitting(true);
 
-    const formData = new FormData(event.currentTarget);
+    // CORREÇÃO: Pega a referência do formulário antes do 'await'
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    
     const data: SolicitationData = {
       contactName: formData.get("contactName") as string,
       phone: formData.get("phone") as string,
@@ -121,8 +124,8 @@ export default function GetStartedPage() {
         icon: "info",
         confirmButtonText: "Entendido",
       });
-      // Limpa o formulário após o envio bem-sucedido
-      event.currentTarget.reset();
+      // Limpa o formulário usando a referência salva
+      form.reset();
     } catch (error: unknown) {
       console.error("Erro no formulário:", error);
       if (error instanceof Error) {
@@ -218,3 +221,4 @@ export default function GetStartedPage() {
     </main>
   );
 }
+
