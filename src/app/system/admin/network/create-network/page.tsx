@@ -4,7 +4,7 @@ import { useState, useEffect, ReactElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
-    ArrowLeft, ArrowRight, Check, Wifi, WifiOff, Loader2, Building2, Share2, 
+    ArrowLeft, ArrowRight, Check, Wifi, WifiOff, Loader2, Share2, 
     Type, Server, Gauge, Zap, Link2, KeyRound, FileText, MapPin 
 } from "lucide-react";
 import { useAuth } from "@/lib/controllers/authcontroller";
@@ -132,7 +132,7 @@ export default function CreateNetworkPage() {
         setConnectionStatus("success");
         AccountAlerts.showSuccess("Conexão estabelecida com sucesso!");
       } else { throw new Error(`Status ${response.status}`); }
-    } catch (error) {
+    } catch {
       setConnectionStatus("error");
       AccountAlerts.showError("Erro ao testar a URL da API.");
     } finally {

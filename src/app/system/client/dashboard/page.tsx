@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ElementType } from "react" // Adicionado ElementType
 import Link from "next/link"
 import { 
     AlertTriangle, Bell, Ticket, Share2, Wifi, Server, Power, Loader2 
 } from "lucide-react"
 import { db } from "@/lib/model/firebase"
-import { collection, getDocs, query, where, DocumentData } from "firebase/firestore"
+// 1. 'DocumentData' removido da importação pois não estava em uso.
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/controllers/authcontroller"
 import type { Account } from "@/lib/controllers/accountscontroller"
 
@@ -18,23 +19,27 @@ interface ClientStats {
     alerts: { critical: number; moderate: number };
 }
 
-// Interfaces para os dados do Firestore
+// 3. Interfaces mais específicas para evitar o uso de `any`.
+// Adicionamos as propriedades que sabemos que existem nos documentos.
 interface Network {
     id: string;
     status: 'active' | 'inactive';
-    [key: string]: any; // Permite outros campos
+    clientId: string;
+    name?: string; // Adicionando outras propriedades prováveis como opcionais
 }
 
 interface Asset {
     id: string;
     status: 'online' | 'offline' | 'maintenance';
-    [key: string]: any; // Permite outros campos
+    networkId: string;
+    name?: string; // Adicionando outras propriedades prováveis como opcionais
 }
 
 
 // --- SUB-COMPONENTES ---
-function StatCard({ icon: Icon, title, value, color, href }: { icon: any; title:string; value: string | number; color: string; href?: string }) {
-    const colorClasses = {
+// 2. Tipo do ícone corrigido de 'any' para 'ElementType' para maior segurança.
+function StatCard({ icon: Icon, title, value, color, href }: { icon: ElementType; title:string; value: string | number; color: string; href?: string }) {
+    const colorClasses: Record<string, string> = { // Tipo mais específico para o objeto
         red: "text-red-400",
         yellow: "text-yellow-400",
         orange: "text-orange-400",
@@ -47,7 +52,7 @@ function StatCard({ icon: Icon, title, value, color, href }: { icon: any; title:
         <div className="flex flex-col justify-between h-full">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-slate-400">{title}</p>
-                <Icon className={`w-6 h-6 ${colorClasses[color as keyof typeof colorClasses]}`} />
+                <Icon className={`w-6 h-6 ${colorClasses[color]}`} />
             </div>
             <div>
                 <p className="text-3xl font-bold text-slate-100">{value}</p>
@@ -96,7 +101,8 @@ export default function ClientDashboardPage() {
                 // 1. Buscar as redes do cliente logado
                 const networksQuery = query(collection(db, "airscan_networks"), where("clientId", "==", currentAccount.id));
                 const networksSnap = await getDocs(networksQuery);
-                const clientNetworks: Network[] = networksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Network));
+                // O casting para 'Network[]' agora é mais seguro com a interface aprimorada
+                const clientNetworks = networksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Network));
                 
                 const activeNetworks = clientNetworks.filter(net => net.status === 'active').length;
                 
@@ -108,7 +114,8 @@ export default function ClientDashboardPage() {
                     const networkIds = clientNetworks.map(net => net.id);
                     const assetsQuery = query(collection(db, "airscan_assets"), where("networkId", "in", networkIds));
                     const assetsSnap = await getDocs(assetsQuery);
-                    const clientAssets: Asset[] = assetsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
+                     // O casting para 'Asset[]' agora é mais seguro
+                    const clientAssets = assetsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
 
                     totalEquipment = clientAssets.length;
                     onlineEquipment = clientAssets.filter(asset => asset.status === 'online').length;
@@ -137,7 +144,6 @@ export default function ClientDashboardPage() {
             if (account) {
                 fetchData(account);
             } else {
-                // Se não houver conta após o carregamento, para de carregar
                 setLoading(false);
             }
         }
@@ -163,10 +169,10 @@ export default function ClientDashboardPage() {
                 </div>
                 
                 <Section title="Minha Rede">
-                    <StatCard icon={Share2} title="Redes Monitoradas" value={stats.networks.total} color="blue" href="/client/network/topology" />
-                    <StatCard icon={Wifi} title="Redes Ativas" value={stats.networks.active} color="green" href="/client/network/topology" />
-                    <StatCard icon={Server} title="Equipamentos Totais" value={stats.equipment.total} color="purple" href="/client/network/devices" />
-                    <StatCard icon={Power} title="Equipamentos Online" value={stats.equipment.online} color="green" href="/client/network/devices" />
+                    <StatCard icon={Share2} title="Redes Monitoradas" value={stats.networks.total} color="blue" href="/system/client/network/view-network" />
+                    <StatCard icon={Wifi} title="Redes Ativas" value={stats.networks.active} color="green" href="/system/client/network/view-network" />
+                    <StatCard icon={Server} title="Equipamentos Totais" value={stats.equipment.total} color="purple" href="/system/client/assets" />
+                    <StatCard icon={Power} title="Equipamentos Online" value={stats.equipment.online} color="green" href="/system/client/assets" />
                 </Section>
 
                 <Section title="Alertas e Suporte">
@@ -178,4 +184,3 @@ export default function ClientDashboardPage() {
         </main>
     );
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ElementType } from "react"
 import Link from "next/link"
 import { 
     AlertTriangle, Bell, MessageSquare, Ticket, Users, UserX, Share2, 
@@ -18,17 +18,10 @@ interface Stats {
     alerts: { critical: number; moderate: number };
 }
 
-interface RecentAlert {
-  id: string;
-  type: "error" | "warning" | "info";
-  message: string;
-  time: string;
-  network: string;
-}
 
 // --- SUB-COMPONENTES ---
-function StatCard({ icon: Icon, title, value, color, href }: { icon: any; title: string; value: string | number; color: string; href?: string }) {
-    const colorClasses = {
+function StatCard({ icon: Icon, title, value, color, href }: { icon: ElementType; title: string; value: string | number; color: string; href?: string }) {
+    const colorClasses: Record<string, string> = {
         red: "text-red-400",
         yellow: "text-yellow-400",
         blue: "text-blue-400",
@@ -41,7 +34,7 @@ function StatCard({ icon: Icon, title, value, color, href }: { icon: any; title:
         <div className="flex flex-col justify-between h-full">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-slate-400">{title}</p>
-                <Icon className={`w-6 h-6 ${colorClasses[color as keyof typeof colorClasses]}`} />
+                <Icon className={`w-6 h-6 ${colorClasses[color]}`} />
             </div>
             <div>
                 <p className="text-3xl font-bold text-slate-100">{value}</p>
@@ -172,3 +165,4 @@ export default function DashboardPage() {
         </main>
     );
 }
+

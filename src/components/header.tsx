@@ -3,14 +3,14 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  Menu, 
-  X, 
-  Activity, 
-  ChevronDown, 
-  User, 
-  Shield, 
-  LogOut, 
+import {
+  Menu,
+  X,
+  Activity,
+  ChevronDown,
+  User,
+  Shield,
+  LogOut,
   LayoutDashboard,
   Network,
   BarChart2,
@@ -18,11 +18,20 @@ import {
   Bell,
   Users,
   Ticket,
-  UserCog
+  UserCog,
+  type LucideProps
 } from "lucide-react";
 import { useAuth, authController } from "@/lib/controllers/authcontroller";
 
-// --- Tipos de Navegação ---
+// --- Type Definitions ---
+interface Account {
+  role: 'admin' | 'cliente';
+  contactName: string;
+}
+
+// This can be replaced with a more specific type from your auth provider (e.g., Firebase's User)
+type CurrentUser = object | null;
+
 interface SubMenuItem {
   name: string;
   href: string;
@@ -32,10 +41,10 @@ interface NavItem {
   name: string;
   href: string;
   submenu?: SubMenuItem[];
-  icon?: React.ElementType;
+  icon?: React.ComponentType<LucideProps>;
 }
 
-// --- Estruturas de Navegação (Com Ícones) ---
+// --- Navigation Data Structures ---
 const mainNav: NavItem[] = [
   { name: "Início", href: "/" },
   { name: "Produto", href: "/product" },
@@ -118,10 +127,10 @@ const adminNav: NavItem[] = [
   { name: "Clientes", href: "/system/admin/accounts", icon: Users },
 ];
 
-// --- Componente do Cabeçalho ---
+// --- Main Header Component ---
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const { account, currentUser } = useAuth(); // Usando o hook de autenticação real
+  const { account, currentUser } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -164,7 +173,7 @@ export function Header() {
                 </>
               )}
             </div>
-            
+
             <div className="md:hidden">
               <button onClick={() => setIsOpen(!isOpen)} className="text-gray-700 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
                 <span className="sr-only">Abrir menu</span>
@@ -172,9 +181,9 @@ export function Header() {
               </button>
             </div>
           </div>
-          
+
           <div className="hidden md:block">
-            {userIsLoggedIn ? (
+            {userIsLoggedIn && account ? (
               <div className={`border-t ${account.role === 'admin' ? 'border-red-100' : 'border-gray-100'}`}>
                 <nav className="flex items-center h-12 space-x-8">
                   {navToRender.map((item) => (
@@ -193,35 +202,40 @@ export function Header() {
             )}
           </div>
         </div>
-        
+
         {isOpen && <MobileMenu closeMenu={() => setIsOpen(false)} account={account} currentUser={currentUser} onLogout={handleLogout} />}
       </header>
-      
+
       {userIsLoggedIn && <BottomNavBar navItems={navToRender} />}
     </>
   );
 }
 
-const UserMenu = ({ account, onLogout }: { account: any, onLogout: () => void }) => {
+// --- Sub-components ---
+
+const UserMenu = ({ account, onLogout }: { account: Account | null, onLogout: () => void }) => {
   if (!account) return null;
+  
   const isAdmin = account.role === 'admin';
-  const themeColor = isAdmin ? 'text-red-600' : 'text-blue-600';
-  const themeHoverBg = isAdmin ? 'hover:bg-red-50' : 'hover:bg-blue-50';
+  const theme = {
+    color: isAdmin ? 'text-red-600' : 'text-blue-600',
+    hoverBg: isAdmin ? 'hover:bg-red-50' : 'hover:bg-blue-50',
+  };
 
   return (
     <div className="relative group">
-      <div className={`flex items-center gap-2 text-sm font-semibold p-2 rounded-md cursor-pointer  ${themeColor}`}>
+      <div className={`flex items-center gap-2 text-sm font-semibold p-2 rounded-md cursor-pointer ${theme.color}`}>
         {isAdmin ? <Shield className="w-5 h-5" /> : <User className="w-5 h-5" />}
         <span>Olá, {account.contactName.split(' ')[0]}</span>
         <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
       </div>
       <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-md shadow-lg border py-1 z-50
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
-        <Link href={isAdmin ? "/system/admin/profile" : "/client/profile"} className={`flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 ${themeHoverBg} hover:${themeColor}`}>
+        <Link href={isAdmin ? "/system/admin/profile" : "/client/profile"} className={`flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 ${theme.hoverBg} hover:${theme.color}`}>
           <UserCog className="w-4 h-4" />
           <span>Meu Perfil</span>
         </Link>
-        <button onClick={onLogout} className={`flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 ${themeHoverBg} hover:${themeColor}`}>
+        <button onClick={onLogout} className={`flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-700 ${theme.hoverBg} hover:${theme.color}`}>
           <LogOut className="w-4 h-4" />
           <span>Sair</span>
         </button>
@@ -233,14 +247,19 @@ const UserMenu = ({ account, onLogout }: { account: any, onLogout: () => void })
 const NavLink = ({ item, isAdmin = false }: { item: NavItem, isAdmin?: boolean }) => {
   const pathname = usePathname();
   const hasSubmenu = !!item.submenu && item.submenu.length > 0;
-  const baseColor = "text-gray-600";
-  const hoverColor = isAdmin ? "hover:text-red-600" : "hover:text-blue-600";
-  const activeColor = isAdmin ? "text-red-600" : "text-blue-600";
-  const isActive = pathname === item.href || (item.submenu && item.submenu.some(sub => pathname === sub.href));
+  
+  const theme = {
+    baseColor: "text-gray-600",
+    hoverColor: isAdmin ? "hover:text-red-600" : "hover:text-blue-600",
+    activeColor: isAdmin ? "text-red-600" : "text-blue-600",
+  };
+  
+  const isActive = (item.href !== '#' && pathname.startsWith(item.href)) || 
+                   (hasSubmenu && item.submenu?.some(sub => pathname.startsWith(sub.href)));
 
   return (
     <div className="relative group h-full flex items-center">
-      <Link href={item.href} className={`flex items-center text-sm font-medium transition-colors duration-300 ${isActive ? activeColor : `${baseColor} ${hoverColor}`}`}>
+      <Link href={item.href} className={`flex items-center text-sm font-medium transition-colors duration-300 ${isActive ? theme.activeColor : `${theme.baseColor} ${theme.hoverColor}`}`}>
         {item.name}
         {hasSubmenu && <ChevronDown className="w-4 h-4 ml-1 transition-transform duration-300 group-hover:rotate-180" />}
       </Link>
@@ -249,7 +268,7 @@ const NavLink = ({ item, isAdmin = false }: { item: NavItem, isAdmin?: boolean }
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
           {item.submenu?.map((subitem) => (
             <Link key={subitem.name} href={subitem.href}
-              className={`block px-4 py-2 text-sm ${pathname === subitem.href ? activeColor : 'text-gray-700'} ${hoverColor} hover:bg-gray-50`}>
+              className={`block px-4 py-2 text-sm ${pathname.startsWith(subitem.href) ? theme.activeColor : 'text-gray-700'} ${theme.hoverColor} hover:bg-gray-50`}>
               {subitem.name}
             </Link>
           ))}
@@ -259,7 +278,7 @@ const NavLink = ({ item, isAdmin = false }: { item: NavItem, isAdmin?: boolean }
   );
 };
 
-const MobileMenu = ({ closeMenu, account, currentUser, onLogout }: { closeMenu: () => void, account: any, currentUser: any, onLogout: () => void }) => {
+const MobileMenu = ({ closeMenu, account, currentUser, onLogout }: { closeMenu: () => void, account: Account | null, currentUser: CurrentUser, onLogout: () => void }) => {
   return (
     <div className="md:hidden fixed inset-0 top-16 bg-white z-50">
       <div className="space-y-4 bg-white p-4 rounded-lg shadow-lg border">
@@ -297,9 +316,10 @@ const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
       <div className="flex justify-around max-w-7xl mx-auto">
         {navItems.map((item) => {
           if (!item.icon) return null;
-          
-          const isActive = pathname === item.href || (item.submenu && item.submenu.some(sub => pathname.startsWith(sub.href)));
-          
+
+          const isActive = (item.href !== '#' && pathname.startsWith(item.href)) || 
+                           (item.submenu && item.submenu.some(sub => pathname.startsWith(sub.href)));
+
           return (
             <Link
               key={item.name}
@@ -317,4 +337,3 @@ const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
     </nav>
   );
 };
-

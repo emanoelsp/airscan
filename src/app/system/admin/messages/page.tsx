@@ -6,6 +6,7 @@ import {
   LifeBuoy, // Ícone para tickets de suporte (alternativa a 'Ticket')
   ArrowRight, // Ícone para os botões de ação
 } from "lucide-react";
+import React from "react"; // Importação explícita do React
 
 // --- COMPONENTE AUXILIAR PARA OS CARTÕES DO DASHBOARD ---
 
@@ -134,3 +135,4 @@ export default function DashboardMessagesPage() {
     </main>
   );
 }
+

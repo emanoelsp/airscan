@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   ZapOff,
   Inbox,
-  CheckCircle,
   Trash2,
   Calendar,
   MessageSquare,
@@ -21,7 +20,7 @@ import { useAuth } from "@/lib/controllers/authcontroller";
 import solicitationsController, { Solicitation } from "@/lib/controllers/solicitationscontroller";
 import * as AccountAlerts from "@/components/allerts/accountsallert";
 
-// NOVO: Modal para responder à solicitação
+// Modal para responder à solicitação
 function ReplyModal({ solicitation, onSave, onCancel }: {
   solicitation: Solicitation;
   onSave: (id: string, replyMessage: string) => void;
@@ -84,7 +83,7 @@ function ReplyModal({ solicitation, onSave, onCancel }: {
 // Componente para exibir um único card de solicitação com o novo layout
 function SolicitationCard({ solicitation, onReply, onDelete }: {
   solicitation: Solicitation;
-  onReply: (solicitation: Solicitation) => void; // Alterado para passar o objeto todo
+  onReply: (solicitation: Solicitation) => void;
   onDelete: (id: string) => void;
 }) {
   const isNew = solicitation.status === 'new';
@@ -186,7 +185,7 @@ export default function SolicitationsPage() {
       await loadData(); // Recarrega os dados para mostrar a resposta atualizada
       AccountAlerts.showSuccess("Resposta salva com sucesso!");
       setReplyingTo(null); // Fecha o modal
-    } catch (error) {
+    } catch {
       AccountAlerts.showError("Erro ao salvar a resposta.");
     }
   };
@@ -279,4 +278,3 @@ export default function SolicitationsPage() {
     </main>
   );
 }
-

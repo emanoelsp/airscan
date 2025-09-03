@@ -4,7 +4,7 @@ import { useState, useEffect, ReactElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
-    ArrowLeft, ArrowRight, Check, Wifi, WifiOff, Loader2, Share2, HardDrive, 
+    ArrowLeft, ArrowRight, Check, Wifi, WifiOff, Loader2, HardDrive, 
     Server, Type, MapPin, Gauge, Zap, Link2, KeyRound 
 } from "lucide-react";
 import { useAuth } from "@/lib/controllers/authcontroller";
@@ -136,7 +136,7 @@ export default function CreateAssetPage() {
       } else {
         throw new Error(`Status ${response.status}`);
       }
-    } catch (error) {
+    } catch { // AVISO CORRIGIDO: A variável 'error' foi removida pois não era utilizada.
       setConnectionStatus("error");
       AccountAlerts.showError("Falha na conexão com a API.");
     } finally {

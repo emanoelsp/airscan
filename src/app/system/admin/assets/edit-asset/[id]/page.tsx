@@ -194,7 +194,7 @@ function EditAssetPage() {
       try {
         const parsedAsset = JSON.parse(decodeURIComponent(assetDataString));
         setAsset(parsedAsset);
-      } catch (e) {
+      } catch {
         setError("Não foi possível carregar os dados do ativo. Tente voltar e selecionar novamente.");
       }
     } else {
@@ -272,4 +272,3 @@ export default function EditAssetPageWrapper() {
         </Suspense>
     )
 }
-

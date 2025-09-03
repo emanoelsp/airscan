@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/controllers/authcontroller";
 import { db } from "@/lib/model/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
-    ArrowLeft, Share2, HardDrive, Server, Eye, Loader2, Power,
+    ArrowLeft, Share2, HardDrive, Server, Eye, Loader2,
     Activity, Clock
 } from "lucide-react";
 import { 
@@ -51,7 +49,6 @@ interface PressureRecord {
 // --- PÁGINA PRINCIPAL ---
 export default function ClientDevicesPage() {
     const { account, loading: authLoading } = useAuth();
-    const router = useRouter();
 
     const [networksWithAssets, setNetworksWithAssets] = useState<NetworkWithAssets[]>([]);
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
@@ -76,7 +73,7 @@ export default function ClientDevicesPage() {
 
                 if (clientNetworks.length === 0) {
                     setNetworksWithAssets([]);
-                    setLoading(false); // Adicionado para parar o loading
+                    setLoading(false);
                     return;
                 }
 
@@ -108,9 +105,10 @@ export default function ClientDevicesPage() {
 
         if (!selectedAsset?.apiUrl) return;
 
+        const apiUrl = selectedAsset.apiUrl;
         const fetchRealTimeData = async () => {
             try {
-                const response = await fetch(selectedAsset.apiUrl, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                const response = await fetch(apiUrl, { headers: { 'ngrok-skip-browser-warning': 'true' } });
                 if (!response.ok) throw new Error(`API Error: ${response.status}`);
                 const data = await response.json();
                 if (data && typeof data.nova_pressao !== 'undefined') {
@@ -172,7 +170,7 @@ export default function ClientDevicesPage() {
                         <div className="space-y-6">
                             <h1 className="text-3xl font-bold text-slate-100">Monitoramento: <span className="text-blue-400">{selectedAsset.name}</span></h1>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4"><Activity className="w-10 h-10 text-blue-400"/><div><p className="text-slate-400 text-sm">Pressão Atual</p><p className="text-2xl font-bold">{latestData?.pressure || '...'} <span className="text-base font-normal text-slate-400">bar</span></p></div></div>
+                                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4"><Activity className="w-10 h-10 text-blue-400"/><div><p className="text-slate-400 text-sm">Pressão Atual</p><p className="text-2xl font-bold">{latestData?.pressure.toFixed(2) || '...'} <span className="text-base font-normal text-slate-400">bar</span></p></div></div>
                                 <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4"><Clock className="w-10 h-10 text-green-400"/><div><p className="text-slate-400 text-sm">Última Leitura</p><p className="text-2xl font-bold">{latestData?.time || '...'}</p></div></div>
                             </div>
                             <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10">
@@ -188,7 +186,7 @@ export default function ClientDevicesPage() {
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={30}>
                                             <PolarAngleAxis type="number" domain={[0, selectedAsset.maxPressure]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
-                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-4xl font-bold">{latestData?.pressure || 0}</text>
+                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-4xl font-bold">{latestData?.pressure.toFixed(2) || '0.00'}</text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
                                         </RadialBarChart>
                                     </ResponsiveContainer>
@@ -248,4 +246,3 @@ export default function ClientDevicesPage() {
         </main>
     );
 }
-

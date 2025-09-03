@@ -1,13 +1,29 @@
 "use client"
 
 import Link from "next/link"
+// 1. Importando o tipo 'ElementType' do React.
+import { ElementType } from "react";
 import { Share2, Server, AlertTriangle, Ticket, ArrowRight } from "lucide-react"
 import { useAuth } from "@/lib/controllers/authcontroller"
+
+// --- INTERFACES E TIPOS ---
+
+// 2. Criando uma interface dedicada para as propriedades do ActionCard.
+interface ActionCardProps {
+  href: string;
+  // 3. Substituindo 'any' por 'ElementType' para uma tipagem segura.
+  icon: ElementType;
+  title: string;
+  description: string;
+  // 4. Usando uma união de tipos para garantir que apenas cores válidas sejam usadas.
+  color: "blue" | "purple" | "yellow" | "orange";
+}
+
 
 // --- SUB-COMPONENTES ---
 
 // Card para as ações principais
-function ActionCard({ href, icon: Icon, title, description, color }: { href: string; icon: any; title: string; description: string; color: string; }) {
+function ActionCard({ href, icon: Icon, title, description, color }: ActionCardProps) {
   const colorClasses = {
     blue: "bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-400",
     purple: "bg-purple-500/10 group-hover:bg-purple-500/20 text-purple-400",
@@ -23,12 +39,12 @@ function ActionCard({ href, icon: Icon, title, description, color }: { href: str
 
   return (
     <Link href={href} className="group block bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 transition-all hover:border-white/20 hover:scale-[1.02] flex flex-col h-full">
-      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-colors ${colorClasses[color as keyof typeof colorClasses]}`}>
+      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-colors ${colorClasses[color]}`}>
         <Icon className="w-8 h-8" />
       </div>
       <h3 className="text-xl font-semibold text-slate-100 mb-2">{title}</h3>
       <p className="text-slate-400 text-sm mb-4 flex-grow">{description}</p>
-      <div className={`font-semibold flex items-center gap-2 transition-colors mt-auto ${arrowColorClasses[color as keyof typeof arrowColorClasses]}`}>
+      <div className={`font-semibold flex items-center gap-2 transition-colors mt-auto ${arrowColorClasses[color]}`}>
         Acessar <ArrowRight className="w-4 h-4" />
       </div>
     </Link>
@@ -59,7 +75,7 @@ export default function ClientNetworkPage() {
                         color="blue"
                     />
                     <ActionCard 
-                        href="/client/network/devices" 
+                        href="/system/client/assets" 
                         icon={Server} 
                         title="Listar Equipamentos" 
                         description="Acesse a lista detalhada de todos os seus ativos monitorados, verifique status e acesse seus dashboards." 

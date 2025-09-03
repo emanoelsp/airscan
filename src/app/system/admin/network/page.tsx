@@ -1,14 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ElementType } from "react";
 import Link from "next/link";
-import { Plus, Search, Share2 as Topology, Wifi, WifiOff, ArrowRight, Loader2 } from "lucide-react";
+// AVISO CORRIGIDO: O ícone 'WifiOff' foi removido pois não estava em uso.
+import { Plus, Search, Share2 as Topology, Wifi, ArrowRight, Loader2 } from "lucide-react";
 import networkController, { NetworkSummary } from "@/lib/controllers/networkcontroller";
+
+// --- INTERFACES E TIPOS ---
+interface ActionCardProps {
+  href: string;
+  // ERRO CORRIGIDO: O tipo do ícone foi alterado de 'any' para 'ElementType'
+  icon: ElementType;
+  title: string;
+  description: string;
+  color: "blue" | "orange" | "green" | "purple";
+}
 
 // --- SUB-COMPONENTES ---
 
 // Card para as ações principais
-function ActionCard({ href, icon: Icon, title, description, color }: { href: string; icon: any; title: string; description: string; color: string; }) {
+function ActionCard({ href, icon: Icon, title, description, color }: ActionCardProps) {
   const colorClasses = {
     blue: "bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-400",
     orange: "bg-orange-500/10 group-hover:bg-orange-500/20 text-orange-400",
@@ -23,12 +34,12 @@ function ActionCard({ href, icon: Icon, title, description, color }: { href: str
   };
   return (
     <Link href={href} className="group block bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 transition-all hover:border-white/20 hover:scale-[1.02]">
-      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-colors ${colorClasses[color as keyof typeof colorClasses]}`}>
+      <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-colors ${colorClasses[color]}`}>
         <Icon className="w-8 h-8" />
       </div>
       <h3 className="text-xl font-semibold text-slate-100 mb-2">{title}</h3>
       <p className="text-slate-400 text-sm mb-4 h-16">{description}</p>
-      <div className={`font-semibold flex items-center gap-2 transition-colors ${arrowColorClasses[color as keyof typeof arrowColorClasses]}`}>
+      <div className={`font-semibold flex items-center gap-2 transition-colors ${arrowColorClasses[color]}`}>
         Acessar <ArrowRight className="w-4 h-4" />
       </div>
     </Link>

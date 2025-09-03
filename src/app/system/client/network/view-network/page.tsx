@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/controllers/authcontroller"
 import networkController, { NetworkTopology, Asset } from "@/lib/controllers/networkcontroller"
 import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Share2 } from "lucide-react"
 import * as AccountAlerts from "@/components/allerts/accountsallert"
-import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts'
+import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
 import { db } from "@/lib/model/firebase"
 import { collection, query, where, getDocs } from "firebase/firestore"
+
+// --- CONSTANTES ---
+const REALTIME_UPDATE_INTERVAL_MS = 5000;
 
 // --- INTERFACES ---
 interface RealTimeMetrics {
@@ -56,7 +58,6 @@ function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedA
 
 // --- PÁGINA PRINCIPAL ---
 export default function ClientTopologyPage() {
-  const router = useRouter();
   const { account, loading: authLoading } = useAuth();
   
   const [network, setNetwork] = useState<NetworkTopology | null>(null);
@@ -70,24 +71,20 @@ export default function ClientTopologyPage() {
 
     const loadClientNetwork = async () => {
       try {
-        // Encontra a rede associada ao cliente logado
         const networksRef = collection(db, "airscan_networks");
         const q = query(networksRef, where("clientId", "==", account.id), where("status", "==", "active"));
         const networkSnapshot = await getDocs(q);
 
         if (networkSnapshot.empty) {
-          // Cliente não tem uma rede ativa
           setNetwork(null); 
           return;
         }
 
-        // Pega a primeira rede encontrada
         const clientNetwork = networkSnapshot.docs[0];
         const topologyData = await networkController.getNetworkTopology(clientNetwork.id);
         
         setNetwork(topologyData);
         if (topologyData?.assets && topologyData.assets.length > 0) {
-          // Seleciona o primeiro ativo por padrão
           setSelectedAsset(topologyData.assets[0]);
         }
       } catch (error) {
@@ -104,14 +101,16 @@ export default function ClientTopologyPage() {
 
   // Efeito para buscar dados da API em tempo real
   useEffect(() => {
-    setRealTimeData(null); // Reseta ao trocar de ativo
+    setRealTimeData(null);
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
     }
 
+    const apiUrl = selectedAsset.apiUrl;
+
     const fetchRealTimeData = async () => {
       try {
-        const response = await fetch(selectedAsset.apiUrl!, {
+        const response = await fetch(apiUrl, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (!response.ok) throw new Error(`API retornou ${response.status}`);
@@ -132,7 +131,7 @@ export default function ClientTopologyPage() {
     };
 
     fetchRealTimeData();
-    const interval = setInterval(fetchRealTimeData, 5000); // Atualiza a cada 5 segundos
+    const interval = setInterval(fetchRealTimeData, REALTIME_UPDATE_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [selectedAsset]);
 
@@ -218,7 +217,6 @@ export default function ClientTopologyPage() {
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
-                                            <PolarAngleAxis type="number" domain={[0, (selectedAsset as any).maxPressure || 10]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
                                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressure.toFixed(2)}</text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>

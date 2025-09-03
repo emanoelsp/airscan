@@ -12,11 +12,14 @@ import {
   query,
   orderBy,
 } from "firebase/firestore";
-import { FirebaseError } from "firebase/app"; // Importado para verificação de tipo segura
+import { FirebaseError } from "firebase/app";
 
-// Interface para os dados da conta, otimizada para o Firestore
+// --- INTERFACES E TIPOS ---
+
 export interface Account {
   id: string; // ID do documento do Firestore
+  // 1. ADICIONADO: Campo para vincular o ID do Firebase Auth
+  authUid: string; 
   contactName: string;
   phone: string;
   email: string;
@@ -26,14 +29,14 @@ export interface Account {
   networkDescription: string;
   login: string;
   role: "cliente" | "admin";
-  status: "active" | "inactive"; // Para desativar clientes
+  status: "active" | "inactive";
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
-// ATUALIZADO: O tipo NewAccountData agora inclui a senha, que não é salva no DB
-export type NewAccountData = Omit<Account, "id" | "status" | "createdAt" | "updatedAt"> & { password?: string };
-export type UpdateAccountData = Partial<Omit<Account, "id" | "createdAt" | "updatedAt">>;
+// Omitimos 'authUid' da criação pois ele é gerado pelo Auth
+export type NewAccountData = Omit<Account, "id" | "authUid" | "status" | "createdAt" | "updatedAt"> & { password?: string };
+export type UpdateAccountData = Partial<Omit<Account, "id" | "authUid" | "createdAt" | "updatedAt">>;
 
 const ACCOUNTS_COLLECTION = "airscan_accounts";
 
@@ -42,36 +45,33 @@ const accountsController = {
    * Cria um usuário no Firebase Auth e uma conta de cliente no Firestore.
    */
   createAccount: async (data: NewAccountData): Promise<string> => {
-    // 1. Validar se a senha foi fornecida
     if (!data.password || data.password.length < 6) {
-        throw new Error("A senha é obrigatória e deve ter no mínimo 6 caracteres.");
+      throw new Error("A senha é obrigatória e deve ter no mínimo 6 caracteres.");
     }
     
     try {
-      // 2. Criar o usuário no Firebase Authentication
-      // CORREÇÃO: Adicionado underscore para silenciar o aviso de 'não utilizado'.
-      const _userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 2. CORRIGIDO: Removido o underscore, pois a variável será usada.
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      // 3. Preparar os dados para o Firestore (removendo a senha)
-      // Esta é uma forma idiomática de omitir uma propriedade, o aviso pode ser ignorado.
+      // Prepara os dados para o Firestore (removendo a senha)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...firestoreData } = data;
 
-      // 4. Salvar os dados adicionais no Firestore
+      // Salva os dados adicionais no Firestore
       const collectionRef = collection(db, ACCOUNTS_COLLECTION);
       const docRef = await addDoc(collectionRef, {
         ...firestoreData,
-        status: "active", // Clientes são criados como ativos por padrão
+        // 3. CORRIGIDO: Salvando o UID do usuário de autenticação no documento.
+        authUid: userCredential.user.uid,
+        status: "active",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        // authUid: _userCredential.user.uid // Agora pode ser usado sem aviso
       });
 
       return docRef.id;
 
-    } catch (error: unknown) { // CORREÇÃO: Trocado 'any' por 'unknown'
+    } catch (error: unknown) {
       console.error("Erro ao criar conta:", error);
-      // Personalizar mensagens de erro do Firebase Auth
       if (error instanceof FirebaseError && error.code === 'auth/email-already-in-use') {
         throw new Error("Este email já está sendo utilizado por outra conta.");
       }
@@ -92,7 +92,6 @@ const accountsController = {
         return [];
       }
 
-      // Mapeia os documentos para o tipo Account, incluindo o ID do documento
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -121,8 +120,7 @@ const accountsController = {
 
   /**
    * Exclui uma conta do Firestore.
-   * NOTA: Isso não exclui o usuário do Firebase Auth. A exclusão de Auth
-   * é uma operação sensível e geralmente requer reautenticação.
+   * NOTA: Isso não exclui o usuário do Firebase Auth.
    */
   deleteAccount: async (accountId: string): Promise<void> => {
     try {
@@ -136,4 +134,3 @@ const accountsController = {
 };
 
 export default accountsController;
-

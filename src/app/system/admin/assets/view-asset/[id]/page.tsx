@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { db } from "@/lib/model/firebase";
 import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { 
-  Eye, Pencil, Trash2, ChevronDown, Loader2, Share2, HardDrive, Server, 
-  Clock, Activity, ArrowUpCircle, ArrowDownCircle
+  Eye, Pencil, Trash2, ChevronDown, Share2, HardDrive, 
+  Clock, Activity
 } from "lucide-react";
 import { confirmAssetDelete } from "@/components/allerts/assetsallert";
 import { showSuccess, showError } from "@/components/allerts/accountsallert";
@@ -103,7 +103,7 @@ function ViewAssetPage() {
         setLoading(false);
       };
       fetchNetworkAssets();
-    } catch (e) {
+    } catch {
       setError("Erro ao processar dados do ativo.");
       setLoading(false);
     }
@@ -184,7 +184,7 @@ function ViewAssetPage() {
             } else {
                 setNetworkAssets(prev => prev.filter(a => a.id !== assetToDelete.id));
             }
-        } catch (e) {
+        } catch {
             showError("Erro ao excluir o ativo.");
         }
      }
@@ -323,4 +323,3 @@ export default function ViewAssetPageWrapper() {
         </Suspense>
     )
 }
-

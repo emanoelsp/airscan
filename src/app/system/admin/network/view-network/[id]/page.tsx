@@ -15,6 +15,13 @@ interface RealTimeMetrics {
   lastUpdate: string;
 }
 
+// FIX: Define a local type that extends the imported Asset interface.
+// This allows us to safely access properties that might not be on the base type.
+type AssetWithPressure = Asset & {
+  maxPressure?: number;
+};
+
+
 // --- COMPONENTES ---
 
 function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedAsset: Asset | null, onSelect: (asset: Asset) => void }) {
@@ -94,10 +101,11 @@ export default function ViewNetworkPage() {
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
     }
-
+    
+    const apiUrl = selectedAsset.apiUrl;
     const fetchRealTimeData = async () => {
       try {
-        const response = await fetch(selectedAsset.apiUrl!, {
+        const response = await fetch(apiUrl, {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (!response.ok) throw new Error(`API retornou ${response.status}`);
@@ -214,8 +222,8 @@ export default function ViewNetworkPage() {
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
-                                            {/* CORREÇÃO: Cast para 'any' para evitar o erro de tipo, mantendo o fallback. */}
-                                            <PolarAngleAxis type="number" domain={[0, (selectedAsset as any).maxPressure || 10]} angleAxisId={0} tick={false} />
+                                            {/* FIX: Cast to the local 'AssetWithPressure' type to safely access maxPressure. */}
+                                            <PolarAngleAxis type="number" domain={[0, (selectedAsset as AssetWithPressure)?.maxPressure || 10]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
                                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressure.toFixed(2)}</text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
