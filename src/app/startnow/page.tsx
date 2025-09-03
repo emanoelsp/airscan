@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   User,
   Phone,
@@ -9,6 +12,13 @@ import {
   AlertTriangle,
   ZapOff,
 } from "lucide-react";
+
+// Importa o novo controller e os alertas
+import solicitationsController, { SolicitationData } from "@/lib/controllers/solicitationscontroller";
+import * as AccountAlerts from "@/components/allerts/accountsallert";
+
+// --- Componentes Auxiliares (InputField e TextareaField) ---
+// (Sem alterações, continuam os mesmos)
 
 function InputField({
   icon: Icon,
@@ -47,7 +57,6 @@ function InputField({
   );
 }
 
-// Componente auxiliar para padronizar os campos de textarea
 function TextareaField({
   icon: Icon,
   id,
@@ -83,7 +92,49 @@ function TextareaField({
   );
 }
 
+
 export default function GetStartedPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRequest = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const data: SolicitationData = {
+      contactName: formData.get("contactName") as string,
+      phone: formData.get("phone") as string,
+      email: formData.get("email") as string,
+      companyName: formData.get("companyName") as string,
+      address: formData.get("address") as string,
+      compressorCount: Number(formData.get("compressorCount")),
+      networkDescription: formData.get("networkDescription") as string,
+      leakImpact: formData.get("leakImpact") as string,
+      shutdownImpact: formData.get("shutdownImpact") as string,
+    };
+
+    try {
+      await solicitationsController.createSolicitation(data);
+      await AccountAlerts.confirmAction({
+        title: "Solicitação Enviada!",
+        text: "Obrigado pelo seu interesse. Nossa equipe entrará em contato em breve.",
+        icon: "info",
+        confirmButtonText: "Entendido",
+      });
+      // Limpa o formulário após o envio bem-sucedido
+      event.currentTarget.reset();
+    } catch (error: unknown) {
+      console.error("Erro no formulário:", error);
+      if (error instanceof Error) {
+        AccountAlerts.showError(error.message);
+      } else {
+        AccountAlerts.showError("Ocorreu um erro desconhecido.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
       {/* Efeito de iluminação de fundo */}
@@ -109,7 +160,7 @@ export default function GetStartedPage() {
 
         {/* Formulário */}
         <form
-          // action={handleQuoteRequest} // Descomente quando a action for criada
+          onSubmit={handleRequest}
           className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-8 md:p-12 space-y-8"
         >
           {/* Seção de Contato */}
@@ -156,9 +207,10 @@ export default function GetStartedPage() {
           <div className="mt-8 pt-8 border-t border-white/10 flex justify-end">
             <button
               type="submit"
-              className="flex justify-center rounded-lg bg-yellow-400 px-8 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500"
+              disabled={isSubmitting}
+              className="flex justify-center rounded-lg bg-yellow-400 px-8 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Enviar Solicitação
+              {isSubmitting ? "Enviando..." : "Enviar Solicitação"}
             </button>
           </div>
         </form>

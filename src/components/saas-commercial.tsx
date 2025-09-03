@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Check, ArrowRight, HardDrive, HelpCircle } from "lucide-react";
 
 export function SaasCommercial() {
@@ -80,10 +81,11 @@ export function SaasCommercial() {
                 <span className="text-slate-500">/mês por rede monitorada</span>
              </div>
 
-             <button className="w-full bg-gradient-to-r from-blue-600 to-teal-500 text-white px-6 py-4 rounded-lg font-bold text-lg transform transition-all hover:scale-105 flex items-center justify-center">
+             <Link href="/startnow" className="w-full bg-gradient-to-r from-blue-600 to-teal-500 text-white px-6 py-4 rounded-lg font-bold text-lg transform transition-all
+              hover:scale-105 flex items-center justify-center">
                 CONTRATE AGORA
                 <ArrowRight className="ml-2 w-5 h-5" />
-             </button>
+             </Link>
 
              <div className="mt-8 pt-6 border-t border-slate-200">
                 <div className="flex items-start gap-4">

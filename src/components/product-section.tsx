@@ -1,7 +1,8 @@
-import { CheckCircle, Cpu, Wifi, BarChart3, ArrowRight, Siren } from "lucide-react";
+import Link from "next/link";
 
 // Componente para os cards de tecnologia, para manter o código limpo
 import { LucideIcon } from "lucide-react";
+import { CheckCircle, Cpu, Wifi, BarChart3, ArrowRight, Siren } from "lucide-react";
 
 type TechCardProps = {
   icon: LucideIcon;
@@ -153,10 +154,11 @@ export function ProductSection() {
                 />
               ))}
             </div>
-            <button className="bg-gradient-to-r from-blue-500 to-teal-400 text-white px-12 py-7 rounded-lg font-bold text-lg transform transition-all hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 flex items-center">
+            <Link href="/startnow" className="bg-gradient-to-r from-blue-500 to-teal-400 text-white px-12 py-7 rounded-lg font-bold text-lg transform transition-all hover:scale-105 
+            hover:shadow-lg hover:shadow-blue-500/30 flex items-center w-fit mx-auto sm:mx-0">
               Solicitar Demonstração
               <ArrowRight className="ml-2 w-5 h-5" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>

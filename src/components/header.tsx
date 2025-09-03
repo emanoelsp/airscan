@@ -1,33 +1,31 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { Menu, X, Activity, ChevronDown, User, Shield, LogOut } from "lucide-react"
-import { useAuth, authController } from "@/lib/controllers/authcontroller" // 1. Importar o hook de autenticação
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, Activity, ChevronDown, User, Shield, LogOut } from "lucide-react";
+import { useAuth, authController } from "@/lib/controllers/authcontroller";
 
-// --- Tipos de Navegação (Sem alterações) ---
+// --- Tipos de Navegação ---
 interface SubMenuItem {
-  name: string
-  href: string
+  name: string;
+  href: string;
 }
 interface NavItem {
-  name: string
-  href: string
-  submenu?: SubMenuItem[]
+  name: string;
+  href: string;
+  submenu?: SubMenuItem[];
 }
 
-// --- Estruturas de Navegação (Agora com tipos) ---
+// --- Estruturas de Navegação ---
 
-// 1. Navegação Principal (Pública)
 const mainNav: NavItem[] = [
   { name: "Início", href: "/" },
   { name: "Produto", href: "/product" },
   { name: "Recursos", href: "/resources" },
   { name: "Empresa", href: "/about" },
-]
+];
 
-// 2. Navegação do Cliente
 const clientNav: NavItem[] = [
   { name: "Dashboard", href: "/client/dashboard" },
   {
@@ -54,9 +52,8 @@ const clientNav: NavItem[] = [
       { name: "Configurar Dispositivo", href: "/client/alerts/configure" },
     ],
   },
-]
+];
 
-// 3. Navegação do Administrador
 const adminNav: NavItem[] = [
   { name: "Dashboard", href: "/system/admin/dashboard" },
   {
@@ -65,8 +62,6 @@ const adminNav: NavItem[] = [
     submenu: [
       { name: "Criar Nova Rede", href: "/system/admin/network/create-network" },
       { name: "Criar Novo Equipamento", href: "/system/admin/assets/create-asset" },
-      { name: "Visualizar Rede", href: "/system/admin/network/search-network" },
-      { name: "Visualizar Equipamento", href: "/system/admin/assets/view-asset" },
     ],
   },
   {
@@ -81,31 +76,28 @@ const adminNav: NavItem[] = [
     name: "Suporte",
     href: "#",
     submenu: [
-      { name: "Chamados", href: "/system/admin/tickets" },
-      { name: "Orçamentos", href: "/system/admin/requests" },
-      { name: "Mensagens", href: "/system/admin/messages" },
+      // CORREÇÃO: Rota ajustada para a página de solicitações.
+      { name: "Solicitações", href: "/system/admin/solicitations" },
     ],
   },
   { name: "Clientes", href: "/system/admin/accounts" },
-]
+];
 
 
 // --- Componente do Cabeçalho ---
 export function Header() {
-  const [isOpen, setIsOpen] = useState(false)
-  const { account, currentUser } = useAuth() // 2. Acessar os dados do usuário logado
-  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false);
+  const { account, currentUser } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      await authController.signOut()
-      // Redireciona para a página de login após o logout
-      router.push("/login")
+      await authController.signOut();
+      router.push("/login");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error)
-      // Opcional: mostrar um alerta de erro
+      console.error("Erro ao fazer logout:", error);
     }
-  }
+  };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -123,7 +115,7 @@ export function Header() {
             </div>
           </Link>
 
-          {/* 3. Renderização Condicional: Logado vs Deslogado */}
+          {/* Renderização Condicional: Logado vs Deslogado */}
           <div className="hidden md:flex items-center space-x-4">
             {currentUser && account ? (
               // -- Exibição quando ESTÁ LOGADO --
@@ -171,9 +163,7 @@ export function Header() {
         )}
       </div>
 
-      {/* 4. Barras de Navegação Condicionais (Baseado no 'role') */}
-
-      {/* Barra do Cliente */}
+      {/* Barras de Navegação Condicionais (Baseado no 'role') */}
       {currentUser && account?.role === 'cliente' && (
         <div className="hidden md:block bg-slate-50 border-t border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -186,7 +176,6 @@ export function Header() {
         </div>
       )}
 
-      {/* Barra do Admin */}
       {currentUser && account?.role === 'admin' && (
         <div className="hidden md:block bg-red-50 border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -231,7 +220,6 @@ const NavLink = ({ item }: { item: NavItem }) => {
   )
 }
 
-// 5. Componente do Menu Mobile ATUALIZADO
 const MobileMenu = ({ closeMenu }: { closeMenu: () => void }) => {
   const { account, currentUser } = useAuth()
   const router = useRouter()
@@ -249,15 +237,14 @@ const MobileMenu = ({ closeMenu }: { closeMenu: () => void }) => {
   return (
     <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t py-4 px-4 sm:px-6 lg:px-8">
       <div className="space-y-4">
-
-        {/* Seção do Usuário Logado ou Botões de Login */}
         {currentUser && account ? (
           <div className="border-b pb-4 space-y-3">
             <div className={`flex items-center gap-3 font-semibold ${account.role === 'admin' ? 'text-red-700' : 'text-blue-700'
               }`}
             >
               {account.role === 'admin' ? <Shield className="w-6 h-6" /> : <User className="w-6 h-6" />}
-              <span className="text-base text-gray-800">Olá, {account.contactName}</span>
+              {/* CORREÇÃO: Mostra apenas o primeiro nome no mobile */}
+              <span className="text-base text-gray-800">Olá, {account.contactName.split(' ')[0]}</span>
             </div>
             <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 text-gray-600 bg-gray-100 hover:bg-gray-200 p-2 text-sm font-medium rounded-md transition-colors">
               <LogOut className="w-5 h-5" />

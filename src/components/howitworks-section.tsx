@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Plug, BrainCircuit, Gamepad2, ArrowRight } from "lucide-react";
 
 export function HowItWorksSection() {
@@ -90,13 +91,6 @@ export function HowItWorksSection() {
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="text-center mt-20">
-          <button className="bg-gradient-to-r from-blue-600 to-teal-500 text-white px-10 py-4 rounded-lg font-bold text-xl transform transition-all hover:scale-105 hover:shadow-lg hover:shadow-blue-600/30 flex items-center mx-auto">
-            Quero Otimizar Minha Operação
-            <ArrowRight className="ml-3 w-6 h-6" />
-          </button>
         </div>
       </div>
     </section>

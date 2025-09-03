@@ -26,10 +26,10 @@ function LightResourceCard({ icon: Icon, title, description, action, color }: Li
             </div>
             <h4 className="text-xl font-bold text-slate-900 mb-3">{title}</h4>
             <p className="text-slate-600 mb-6 flex-grow">{description}</p>
-            <a href="#" className={`mt-auto font-semibold ${variant.text} inline-flex items-center justify-center group/link`}>
+            {/* <a href="#" className={`mt-auto font-semibold ${variant.text} inline-flex items-center justify-center group/link`}>
                 {action}
                 <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover/link:translate-x-1" />
-            </a>
+            </a> */}
         </div>
     );
 }
@@ -51,6 +51,11 @@ export function LearningResources() {
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
             Tudo que você precisa para dominar o sistema e maximizar seus resultados.
           </p>
+          <h3 className="mt-6"> Solicite nossos recursos de aprendizagem atrvés do botão abaixo </h3>
+          <a href="/startnow" className="mt-6 inline-block bg-gradient-to-r from-blue-600 to-teal-500 text-white px-8 py-3 rounded-lg font-semibold text-lg transform transition-all hover:scale-105 hover:shadow-lg hover:shadow-blue-600/30">
+            Quero Acessar os Recursos
+            <ArrowRight className="ml-2 w-5 h-5 inline-block" />
+          </a>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

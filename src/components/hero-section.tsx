@@ -1,9 +1,10 @@
+import Link from "next/link";
+
 import {
   Activity,
   Gauge,
   Shield,
   Zap,
-  ArrowDown,
 } from "lucide-react";
 
 type FeatureCardProps = {
@@ -65,12 +66,11 @@ export function HeroSection() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {/* Botão primário com mais destaque e micro-interação */}
-            <button className="bg-yellow-400 text-slate-900 px-10 py-5 rounded-lg font-bold text-lg transform transition-all hover:scale-105 hover:bg-yellow-500 shadow-lg shadow-yellow-400/20 flex items-center justify-center">
+            <Link href="/product" className="bg-yellow-400 text-slate-900 px-10 py-5 rounded-lg font-bold text-lg transform transition-all hover:scale-105 hover:bg-yellow-500 shadow-lg shadow-yellow-400/20 flex items-center justify-center">
               <span className="bg-gradient-to-r from-slate-900 to-blue-600 bg-clip-text text-transparent">
                 Conheça o AIRscan
               </span>
-              <ArrowDown className="ml-2 w-5 h-5" />
-            </button>
+            </Link>
           </div>
         </div>
 
