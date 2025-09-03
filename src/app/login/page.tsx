@@ -1,4 +1,10 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, Activity, Shield, LayoutDashboard } from "lucide-react";
+import { authController } from "@/lib/controllers/authcontroller";
 
 // Componente para um card de feature simplificado na lateral
 function FeatureHighlight({
@@ -24,6 +30,37 @@ function FeatureHighlight({
 }
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const account = await authController.signIn(email, password);
+      
+      if (account.role === 'admin') {
+        router.push("/system/admin/dashboard");
+      } else {
+        router.push("/system/client/dashboard");
+      }
+    } catch (err: unknown) { // CORREÇÃO: Trocado 'any' por 'unknown'
+      // Verifica se o erro é uma instância de Error para acessar a mensagem com segurança
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Ocorreu um erro inesperado.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center bg-slate-900 text-white p-4 overflow-hidden">
       {/* Efeito de iluminação de fundo */}
@@ -75,7 +112,12 @@ export default function LoginPage() {
              <p className="text-sm text-slate-400 mt-1">Bem-vindo! Insira seus dados.</p>
           </div>
          
-          <form className="mt-8 space-y-6">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            {error && (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
+                {error}
+              </div>
+            )}
             {/* Campo de Email */}
             <div>
               <label
@@ -92,6 +134,8 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@empresa.com"
                   className="block w-full rounded-md border-0 bg-slate-800/50 py-3 pl-10 text-white shadow-sm ring-1 ring-inset ring-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-yellow-400 sm:text-sm"
                 />
@@ -121,6 +165,8 @@ export default function LoginPage() {
                   type="password"
                   autoComplete="current-password"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="block w-full rounded-md border-0 bg-slate-800/50 py-3 pl-10 text-white shadow-sm ring-1 ring-inset ring-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-yellow-400 sm:text-sm"
                 />
@@ -131,9 +177,10 @@ export default function LoginPage() {
             <div>
               <button
                 type="submit"
-                className="flex w-full justify-center rounded-lg bg-yellow-400 px-3 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500"
+                disabled={isLoading}
+                className="flex w-full justify-center rounded-lg bg-yellow-400 px-3 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Entrar
+                {isLoading ? 'Entrando...' : 'Entrar'}
               </button>
             </div>
           </form>
@@ -141,12 +188,13 @@ export default function LoginPage() {
           {/* Link para Contratar */}
           <p className="mt-10 text-center text-sm text-slate-400">
             Não tem uma conta?{' '}
-            <a href="#" className="font-semibold leading-6 text-yellow-400 hover:text-yellow-300">
+            <Link href="/startnow" className="font-semibold leading-6 text-yellow-400 hover:text-yellow-300">
               Contrate agora nossa solução
-            </a>
+            </Link>
           </p>
         </div>
       </div>
     </main>
   );
 }
+

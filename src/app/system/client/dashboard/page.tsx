@@ -233,7 +233,7 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Monitoramento - ADMINISTRADOR </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Monitoramento - CLIENTE </h1>
           <p className="text-gray-600">Visão geral do sistema de monitoramento de ar comprimido</p>
         </div>
 

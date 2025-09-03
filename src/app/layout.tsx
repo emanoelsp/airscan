@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { AuthProvider } from "@/lib/controllers/authcontroller"; // 1. Importar o AuthProvider
 
 export const metadata: Metadata = {
   title: "AIRScan",
@@ -14,12 +15,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-br">
       <body>
-        <Header />
-          {children}
-        <Footer />
+        {/* 2. Envolver a aplicação com o AuthProvider */}
+        <AuthProvider>
+          <Header />
+            {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

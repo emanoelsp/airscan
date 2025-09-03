@@ -14,7 +14,7 @@ export default function NetworkPage() {
         {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Criar Nova Rede */}
-          <Link href="/network/create" className="group">
+          <Link href="/system/admin/network/create-network" className="group">
             <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
               <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
                 <Plus className="w-8 h-8 text-blue-600" />
@@ -28,7 +28,7 @@ export default function NetworkPage() {
           </Link>
 
           {/* Criar Novo Ativo */}
-          <Link href="/network/create-asset" className="group">
+          <Link href="/system/admin/assets/create-asset" className="group">
             <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
               <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
                 <Plus className="w-8 h-8 text-orange-600" />
@@ -40,16 +40,16 @@ export default function NetworkPage() {
           </Link>
 
           {/* Topologia de Ativos */}
-          <Link href="/network/topology" className="group">
+          <Link href="/system/admin/network/search-network" className="group">
             <div className="bg-white rounded-xl p-8 shadow-sm border hover:shadow-lg transition-all duration-200 group-hover:-translate-y-1">
               <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-green-200 transition-colors">
                 <Topology className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Topologia de Ativos</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Procurar Redes</h3>
               <p className="text-gray-600 mb-4">
                 Visualize a topologia completa dos seus ativos monitorados em tempo real
               </p>
-              <div className="text-green-600 font-medium group-hover:text-green-700">Ver topologia →</div>
+              <div className="text-green-600 font-medium group-hover:text-green-700">Buscar topologia →</div>
             </div>
           </Link>
 
