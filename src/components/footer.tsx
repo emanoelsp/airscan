@@ -11,20 +11,20 @@ export function Footer() {
 
   const footerSections = {
     produto: [
-      { name: "Dashboard", href: "/product#dashboard" },
-      { name: "Recursos", href: "/product#recursos" },
-      { name: "Planos", href: "/product#planos" },
-      { name: "Segurança", href: "/product#seguranca" },
+      { name: "Dashboard", href: "/produto#dashboard" },
+      { name: "Recursos", href: "/produto#recursos" },
+      { name: "Planos", href: "/produto#planos" },
+      { name: "Segurança", href: "/produto#seguranca" },
     ],
     recursos: [
-      { name: "Central de Ajuda", href: "/resources#help" },
-      { name: "Documentação", href: "/resources#learning" },
-      { name: "Suporte", href: "/resources#support" },
+      { name: "Central de Ajuda", href: "/recursos#ajuda" },
+      { name: "Documentação", href: "/recursos#aprendizagem" },
+      { name: "Suporte", href: "/recursos#suporte" },
     ],
     empresa: [
-      { name: "Sobre Nós", href: "/about#about" },
-      { name: "Perguntas Frequentes", href: "/about#faq" },
-      { name: "Contato", href: "/about#contact" },
+      { name: "Sobre Nós", href: "/empresa#sobrenos" },
+      { name: "Perguntas Frequentes", href: "/empresa#perguntas" },
+      { name: "Contato", href: "/empresa#contatos" },
     ],
 
   };
@@ -60,7 +60,7 @@ export function Footer() {
 
           {/* Colunas de Links */}
           <div>
-            <Link href="/product" className="text-lg font-semibold text-white">Produto</Link>
+            <Link href="/produto" className="text-lg font-semibold text-white">Produto</Link>
             <ul className="space-y-3 mt-4 text-sm">
               {footerSections.produto.map((link) => (
                 <li key={link.name}>
@@ -73,7 +73,7 @@ export function Footer() {
           </div>
 
           <div>
-            <Link href="/resources" className="text-lg font-semibold text-white">Recursos</Link>
+            <Link href="/recursos" className="text-lg font-semibold text-white">Recursos</Link>
             <ul className="space-y-3 mt-4 text-sm">
               {footerSections.recursos.map((link) => (
                 <li key={link.name}>
@@ -86,7 +86,7 @@ export function Footer() {
           </div>
 
           <div>
-            <Link href="/about" className="text-lg font-semibold text-white">Empresa</Link>
+            <Link href="/empresa" className="text-lg font-semibold text-white">Empresa</Link>
             <ul className="space-y-3 mt-4 text-sm">
               {footerSections.empresa.map((link) => (
                 <li key={link.name}>

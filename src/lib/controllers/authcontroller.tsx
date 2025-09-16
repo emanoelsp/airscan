@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth";
-import { auth, db } from "@/lib/model/firebase";
+import { auth, db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { Account } from "./accountscontroller";
 import { FirebaseError } from "firebase/app"; // Importado para verificação de tipo

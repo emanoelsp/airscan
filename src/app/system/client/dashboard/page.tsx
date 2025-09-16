@@ -5,7 +5,7 @@ import Link from "next/link"
 import { 
     AlertTriangle, Bell, Ticket, Share2, Wifi, Server, Power, Loader2 
 } from "lucide-react"
-import { db } from "@/lib/model/firebase"
+import { db } from "@/lib/firebase/firebaseconfig"
 // 1. 'DocumentData' removido da importação pois não estava em uso.
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/controllers/authcontroller"

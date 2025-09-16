@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { db } from "@/lib/model/firebase";
+import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { 
   Eye, Pencil, Trash2, ChevronDown, Share2, HardDrive, 
-  Clock, Activity
+  Clock, Activity, Siren, CheckCircle2 
 } from "lucide-react";
 import { confirmAssetDelete } from "@/components/allerts/assetsallert";
 import { showSuccess, showError } from "@/components/allerts/accountsallert";
@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 
 
-// --- INTERFACES ---
+// --- INTERFACES E TIPOS ---
 interface Asset {
   id: string;
   name: string;
@@ -35,16 +35,57 @@ interface Network {
     name: string;
 }
 
-// Dados da API (simplificado)
+// Interface para dados da API com IA
 interface ApiDataPoint {
     time: string;
-    pressure: number;
+    pressao: number;
+    is_anomaly: boolean;
 }
 
 // Registro de picos de pressão
 interface PressureRecord {
     value: number;
     time: string;
+}
+
+// Tipo para o status do consumo
+type ConsumptionStatus = 'normal' | 'anomaly' | 'risk';
+
+
+// --- COMPONENTE DE STATUS (REUTILIZÁVEL) ---
+function ConsumptionStatusDisplay({ status }: { status: ConsumptionStatus }) {
+  const statusConfig = {
+    normal: {
+      text: "Consumo Normal",
+      icon: CheckCircle2,
+      colorClasses: "bg-green-500/10 text-green-400",
+      iconColor: "text-green-400",
+    },
+    anomaly: {
+      text: "Alerta de Anomalia",
+      icon: Siren,
+      colorClasses: "bg-orange-500/10 text-orange-400",
+      iconColor: "text-orange-400",
+    },
+    risk: {
+      text: "Risco Operacional",
+      icon: Siren,
+      colorClasses: "bg-red-500/10 text-red-400 animate-pulse",
+      iconColor: "text-red-400",
+    },
+  };
+
+  const { text, icon: Icon, colorClasses, iconColor } = statusConfig[status];
+
+  return (
+    <div className={`p-6 rounded-2xl border border-white/10 flex items-center gap-4 ${colorClasses}`}>
+      <Icon className={`w-10 h-10 ${iconColor}`}/>
+      <div>
+        <p className="text-slate-400 text-sm">Status do Consumo</p>
+        <p className="text-2xl font-bold">{text}</p>
+      </div>
+    </div>
+  );
 }
 
 
@@ -68,6 +109,10 @@ function ViewAssetPage() {
   const [liveData, setLiveData] = useState<ApiDataPoint[]>([]);
   const [minPressure, setMinPressure] = useState<PressureRecord | null>(null);
   const [maxPressure, setMaxPressure] = useState<PressureRecord | null>(null);
+  
+  // Estados para a lógica de anomalia
+  const [consumptionStatus, setConsumptionStatus] = useState<ConsumptionStatus>('normal');
+  const [anomalyStartTime, setAnomalyStartTime] = useState<number | null>(null);
   
   const latestData = liveData[liveData.length - 1];
 
@@ -115,6 +160,8 @@ function ViewAssetPage() {
     setLiveData([]);
     setMinPressure(null);
     setMaxPressure(null);
+    setConsumptionStatus('normal');
+    setAnomalyStartTime(null);
 
     if (!currentAsset?.apiUrl) return;
 
@@ -128,29 +175,38 @@ function ViewAssetPage() {
         
         const data = await response.json();
         
-        if (data && typeof data.nova_pressao !== 'undefined') {
-            const pressureValue = parseFloat(data.nova_pressao);
+        if (data && typeof data.pressao !== 'undefined' && typeof data.is_anomaly !== 'undefined') {
+            const pressureValue = parseFloat(data.pressao);
+            const isAnomaly = data.is_anomaly;
             const currentTime = new Date();
             
             const newPoint: ApiDataPoint = {
                 time: currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                pressure: pressureValue,
+                pressao: pressureValue,
+                is_anomaly: isAnomaly,
             };
             setLiveData(prevData => [...prevData.slice(-29), newPoint]);
 
-            setMinPressure(prevMin => {
-                if (!prevMin || pressureValue < prevMin.value) {
-                    return { value: pressureValue, time: currentTime.toLocaleString('pt-BR') };
-                }
-                return prevMin;
-            });
-            
-            setMaxPressure(prevMax => {
-                if (!prevMax || pressureValue > prevMax.value) {
-                    return { value: pressureValue, time: currentTime.toLocaleString('pt-BR') };
-                }
-                return prevMax;
-            });
+            // Lógica de Mín/Máx
+            setMinPressure(prevMin => (!prevMin || pressureValue < prevMin.value) ? { value: pressureValue, time: currentTime.toLocaleString('pt-BR') } : prevMin);
+            setMaxPressure(prevMax => (!prevMax || pressureValue > prevMax.value) ? { value: pressureValue, time: currentTime.toLocaleString('pt-BR') } : prevMax);
+
+            // Lógica para definir o status do consumo
+            if (isAnomaly) {
+              const now = Date.now();
+              const startTime = anomalyStartTime ?? now;
+              if (!anomalyStartTime) {
+                setAnomalyStartTime(startTime);
+              }
+              if (now - startTime >= 120000) { // 2 minutos
+                setConsumptionStatus('risk');
+              } else {
+                setConsumptionStatus('anomaly');
+              }
+            } else {
+              setConsumptionStatus('normal');
+              setAnomalyStartTime(null);
+            }
 
         } else {
             console.error("Resposta da API inválida:", data);
@@ -164,7 +220,7 @@ function ViewAssetPage() {
     fetchRealTimeData();
     const interval = setInterval(fetchRealTimeData, 5000);
     return () => clearInterval(interval);
-  }, [currentAsset]);
+  }, [currentAsset, anomalyStartTime]);
 
 
   // --- FUNÇÕES DE NAVEGAÇÃO E AÇÃO ---
@@ -220,10 +276,10 @@ function ViewAssetPage() {
      );
   }
 
-  const gaugeData = [{ name: 'Pressure', value: latestData?.pressure || 0, fill: '#3b82f6' }];
+  const gaugeData = [{ name: 'Pressure', value: latestData?.pressao || 0, fill: '#3b82f6' }];
   const barChartData = [
     { name: 'Mín', pressure: minPressure?.value || 0, fill: '#22c55e' },
-    { name: 'Atual', pressure: latestData?.pressure || 0, fill: '#3b82f6' },
+    { name: 'Atual', pressure: latestData?.pressao || 0, fill: '#3b82f6' },
     { name: 'Máx', pressure: maxPressure?.value || 0, fill: '#ef4444' },
   ];
 
@@ -261,9 +317,24 @@ function ViewAssetPage() {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-slate-100">Monitoramento: <span className="text-blue-400">{currentAsset.name}</span></h1>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4"><Activity className="w-10 h-10 text-blue-400"/><div><p className="text-slate-400 text-sm">Pressão Atual</p><p className="text-2xl font-bold">{latestData?.pressure || '...'} <span className="text-base font-normal text-slate-400">bar</span></p></div></div>
-                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4"><Clock className="w-10 h-10 text-green-400"/><div><p className="text-slate-400 text-sm">Última Leitura</p><p className="text-2xl font-bold">{latestData?.time || '...'}</p></div></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4">
+                    <Activity className="w-10 h-10 text-blue-400"/>
+                    <div>
+                        <p className="text-slate-400 text-sm">Pressão Atual</p>
+                        <p className="text-2xl font-bold">{latestData?.pressao.toFixed(2) || '...'} <span className="text-base font-normal text-slate-400">bar</span></p>
+                    </div>
+                </div>
+                
+                <ConsumptionStatusDisplay status={consumptionStatus} />
+
+                <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10 flex items-center gap-4">
+                    <Clock className="w-10 h-10 text-green-400"/>
+                    <div>
+                        <p className="text-slate-400 text-sm">Última Leitura</p>
+                        <p className="text-2xl font-bold">{latestData?.time || '...'}</p>
+                    </div>
+                </div>
             </div>
 
             <div className="bg-slate-800/40 p-6 rounded-2xl border border-white/10">
@@ -275,7 +346,7 @@ function ViewAssetPage() {
                         <YAxis stroke="#94a3b8" fontSize={12} domain={['dataMin - 1', 'dataMax + 1']} />
                         <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} />
                         <Legend />
-                        <Line type="monotone" dataKey="pressure" name="Pressão (bar)" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="pressao" name="Pressão (bar)" stroke="#3b82f6" strokeWidth={2} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
@@ -287,7 +358,7 @@ function ViewAssetPage() {
                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={30}>
                             <PolarAngleAxis type="number" domain={[0, currentAsset.maxPressure]} angleAxisId={0} tick={false} />
                             <RadialBar background dataKey="value" angleAxisId={0} />
-                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-4xl font-bold">{latestData?.pressure || 0}</text>
+                             <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-4xl font-bold">{latestData?.pressao.toFixed(2) || '0.00'}</text>
                              <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
                         </RadialBarChart>
                     </ResponsiveContainer>

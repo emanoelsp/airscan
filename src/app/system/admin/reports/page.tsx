@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { db } from "@/lib/model/firebase"
+import { db } from "@/lib/firebase/firebaseconfig"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import {
   BarChart,

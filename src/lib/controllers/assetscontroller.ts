@@ -1,4 +1,4 @@
-import { db } from "@/lib/model/firebase";
+import { db } from "@/lib/firebase/firebaseconfig";
 import { 
   doc, 
   updateDoc, 
@@ -6,19 +6,22 @@ import {
   collection, 
   addDoc, 
   getDocs, 
+  query,
+  where,
   DocumentData 
 } from "firebase/firestore";
 
 // --- INTERFACES ---
 
-// Interface para um ativo, combinando as definições
+// Interface para um ativo, agora com os campos de limite
 export interface Asset {
   id: string;
   name: string;
-  type: "compressor" | "sensor" | "distributor" | string; // Permitindo outros tipos
+  type: "compressor" | "sensor" | "distributor" | string;
   status: 'online' | 'offline' | 'maintenance';
   networkId: string;
   networkName: string;
+  accountId: string; // Adicionado para vincular o ativo à conta do cliente
   location: string;
   model: string;
   apiKey: string;
@@ -26,10 +29,16 @@ export interface Asset {
   description: string;
   maxPressure: number;
   powerRating: number;
+  // Novos campos para limites de alerta
+  limitLow?: number;
+  limitNormal?: number;
+  limitRisk?: number;
+  limitCritical?: number;
 }
 
 // Interface para uma rede
 export interface Network {
+  accountId: string;
   id: string;
   name: string;
   location?: string;
@@ -42,19 +51,20 @@ export interface Network {
 export interface AssetCreationData {
   networkId: string;
   networkName: string;
+  accountId: string; // Garantir que o ID da conta seja salvo na criação
   name: string;
   type: "compressor" | "sensor" | "distributor";
   model: string;
   description: string;
   location: string;
-  maxPressure: string; // Vem como string do formulário
-  powerRating: string; // Vem como string do formulário
+  maxPressure: string;
+  powerRating: string;
   apiUrl: string;
   apiKey: string;
 }
 
 // Interface para os dados que podem ser atualizados
-export type UpdateAssetData = Partial<Omit<Asset, 'id' | 'networkId' | 'networkName'>>;
+export type UpdateAssetData = Partial<Omit<Asset, 'id' | 'networkId' | 'networkName' | 'accountId'>>;
 
 // --- CONTROLLER ---
 
@@ -77,6 +87,27 @@ const assetsController = {
       throw new Error("Não foi possível carregar as redes.");
     }
   },
+  
+  /**
+   * NOVA FUNÇÃO: Busca todos os ativos associados a um ID de conta de cliente.
+   */
+  getAssetsByAccountId: async (accountId: string): Promise<Asset[]> => {
+    try {
+      const assetsRef = collection(db, "airscan_assets");
+      const q = query(assetsRef, where("accountId", "==", accountId));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) return [];
+
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as DocumentData),
+      })) as Asset[];
+    } catch (error) {
+      console.error("Erro ao buscar ativos da conta:", error);
+      throw new Error("Não foi possível carregar os equipamentos.");
+    }
+  },
 
   /**
    * Cria um novo ativo na coleção 'airscan_assets'.
@@ -88,7 +119,7 @@ const assetsController = {
         ...data,
         maxPressure: Number(data.maxPressure) || 0,
         powerRating: Number(data.powerRating) || 0,
-        status: "online", // Status padrão
+        status: "online",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -117,4 +148,3 @@ const assetsController = {
 };
 
 export default assetsController;
-

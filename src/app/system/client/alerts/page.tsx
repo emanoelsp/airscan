@@ -1,359 +1,182 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { db } from "@/lib/model/firebase"
-import { collection, getDocs, query, where, addDoc } from "firebase/firestore"
-import { Gauge } from "lucide-react"
-import { toast } from "react-hot-toast"
+import { useState, useEffect, ElementType } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/controllers/authcontroller";
+import assetsController from "@/lib/controllers/assetscontroller";
+import dispositivesController from "@/lib/controllers/dispositivescontroller";
+import { 
+    LayoutDashboard, 
+    Bell, 
+    Server, 
+    Users, 
+    ArrowRight, 
+    Settings, 
+    UserPlus,
+    BarChart3,
+    Loader2 
+} from "lucide-react";
 
-interface Network {
-  id: string
-  name: string
+// --- INTERFACES ---
+
+interface SummaryCardProps {
+    icon: ElementType;
+    title: string;
+    value: string | number;
+    description: string;
+    color: "blue" | "purple" | "green";
 }
 
-interface Asset {
-  id: string
-  name: string
-  networkId: string
+interface ActionCardProps {
+    href: string;
+    icon: ElementType;
+    title: string;
+    description: string;
 }
 
-// CORREÇÃO 1: Criar um tipo para os valores de alerta
-type AlertType = "fluxo" | "pressao" | "temperatura"
 
-interface Alert {
-  id: string
-  assetId: string
-  type: AlertType
-  minValue: number
-  maxValue: number
-  enabled: boolean
+// --- SUB-COMPONENTES ---
+
+function SummaryCard({ icon: Icon, title, value, description, color }: SummaryCardProps) {
+    const colorClasses = {
+        blue: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+        purple: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+        green: "text-green-400 border-green-500/30 bg-green-500/10",
+    };
+    return (
+        <div className={`border rounded-2xl p-6 flex flex-col ${colorClasses[color]}`}>
+            <div className="flex justify-between items-start">
+                <h3 className="font-semibold text-slate-200">{title}</h3>
+                <Icon className="w-7 h-7" />
+            </div>
+            <p className="text-4xl font-bold mt-4 text-white">{value}</p>
+            <p className="text-sm text-slate-400 mt-2">{description}</p>
+        </div>
+    );
 }
 
-export default function AlertsPage() {
-  const [networks, setNetworks] = useState<Network[]>([])
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [alerts, setAlerts] = useState<Alert[]>([])
-  const [selectedNetwork, setSelectedNetwork] = useState("")
-  const [selectedAsset, setSelectedAsset] = useState("")
-  const [loading, setLoading] = useState(true)
+function ActionCard({ href, icon: Icon, title, description }: ActionCardProps) {
+    return (
+        <Link href={href} className="group block bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 transition-all hover:border-blue-400/50 hover:bg-slate-800/60 flex flex-col h-full">
+            <div className="w-16 h-16 bg-slate-700/50 rounded-xl flex items-center justify-center mb-6 transition-colors group-hover:bg-blue-500/20 group-hover:text-blue-300">
+                <Icon className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-100 mb-2">{title}</h3>
+            <p className="text-slate-400 text-sm mb-4 flex-grow">{description}</p>
+            <div className="font-semibold flex items-center gap-2 transition-colors mt-auto text-blue-400 group-hover:text-blue-300">
+                Acessar <ArrowRight className="w-4 h-4" />
+            </div>
+        </Link>
+    );
+}
 
-  // Dados em tempo real simulados
-  const [realTimeData, setRealTimeData] = useState({
-    fluxo: 65.2,
-    pressao: 7.3,
-    temperatura: 46,
-  })
 
-  // Usar o tipo AlertType aqui também
-  const [newAlert, setNewAlert] = useState({
-    type: "fluxo" as AlertType,
-    minValue: 0,
-    maxValue: 100,
-    enabled: true,
-  })
+// --- PÁGINA PRINCIPAL ---
 
-  useEffect(() => {
-    fetchData()
-    // Simular dados em tempo real
-    const interval = setInterval(() => {
-      setRealTimeData({
-        fluxo: 60 + Math.random() * 20,
-        pressao: 7 + Math.random() * 1,
-        temperatura: 40 + Math.random() * 15,
-      })
-    }, 3000)
+export default function AlertsDashboardPage() {
+    const { account, loading: authLoading } = useAuth();
+    
+    const [assetCount, setAssetCount] = useState<number>(0);
+    const [deviceCount, setDeviceCount] = useState<number>(0);
+    const [isLoading, setIsLoading] = useState(true);
+    
+    // Mock de dados de alertas
+    const alertData = { low: 5, risk: 2, critical: 1 };
+    const totalAlerts = alertData.low + alertData.risk + alertData.critical;
 
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    if (selectedNetwork) {
-      fetchAssets(selectedNetwork)
-    }
-  }, [selectedNetwork])
-
-  useEffect(() => {
-    if (selectedAsset) {
-      fetchAlerts(selectedAsset)
-    }
-  }, [selectedAsset])
-
-  const fetchData = async () => {
-    try {
-      const networksRef = collection(db, "networks")
-      const snapshot = await getDocs(networksRef)
-      const networksData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      })) as Network[]
-      setNetworks(networksData)
-    } catch (error) {
-      console.error("Erro ao buscar dados:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchAssets = async (networkId: string) => {
-    try {
-      const assetsRef = collection(db, "assets")
-      const q = query(assetsRef, where("networkId", "==", networkId))
-      const snapshot = await getDocs(q)
-      const assetsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-        networkId: doc.data().networkId,
-      })) as Asset[]
-      setAssets(assetsData)
-    } catch (error) {
-      console.error("Erro ao buscar ativos:", error)
-    }
-  }
-
-  const fetchAlerts = async (assetId: string) => {
-    try {
-      const alertsRef = collection(db, "alerts")
-      const q = query(alertsRef, where("assetId", "==", assetId))
-      const snapshot = await getDocs(q)
-      const alertsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Alert[]
-      setAlerts(alertsData)
-    } catch (error) {
-      console.error("Erro ao buscar alertas:", error)
-    }
-  }
-
-  const createAlert = async () => {
-    if (!selectedAsset) return
-
-    try {
-      await addDoc(collection(db, "alerts"), {
-        assetId: selectedAsset,
-        ...newAlert,
-        createdAt: new Date(),
-      })
-
-      fetchAlerts(selectedAsset)
-      setNewAlert({
-        type: "fluxo",
-        minValue: 0,
-        maxValue: 100,
-        enabled: true,
-      })
-      toast.success("Alerta criado com sucesso!")
-    } catch (error) {
-      console.error("Erro ao criar alerta:", error)
-      toast.error("Erro ao criar alerta. Tente novamente.")
-    }
-  }
-
-  const getGaugeColor = (value: number, min: number, max: number) => {
-    if (value < min || value > max) return "#EF4444" // Vermelho
-    if (value < min + (max - min) * 0.2 || value > max - (max - min) * 0.2) return "#F59E0B" // Amarelo
-    return "#10B981" // Verde
-  }
-
-  const GaugeChart = ({
-    value,
-    min,
-    max,
-    label,
-    unit,
-  }: { value: number; min: number; max: number; label: string; unit: string }) => {
-    const percentage = ((value - min) / (max - min)) * 100
-    const color = getGaugeColor(value, min, max)
+    useEffect(() => {
+        if (!authLoading && account?.id) {
+            const fetchData = async () => {
+                setIsLoading(true);
+                try {
+                    const [assets, devices] = await Promise.all([
+                        assetsController.getAssetsByAccountId(account.id),
+                        dispositivesController.getDevicesByAccountId(account.id)
+                    ]);
+                    setAssetCount(assets.length);
+                    setDeviceCount(devices.length);
+                } catch (error) {
+                    console.error("Falha ao carregar dados do dashboard:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchData();
+        }
+    }, [account, authLoading]);
 
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm border text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{label}</h3>
-        <div className="relative w-32 h-32 mx-auto mb-4">
-          <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="50" fill="none" stroke="#E5E7EB" strokeWidth="10" />
-            <circle
-              cx="60"
-              cy="60"
-              r="50"
-              fill="none"
-              stroke={color}
-              strokeWidth="10"
-              strokeDasharray={`${percentage * 3.14} 314`}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color }}>
-                {value.toFixed(1)}
-              </div>
-              <div className="text-sm text-gray-500">{unit}</div>
-            </div>
-          </div>
-        </div>
-        <div className="text-sm text-gray-600">
-          Limite: {min} - {max} {unit}
-        </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando alertas...</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Alertas</h1>
-          <p className="text-gray-600">Configure limites e monitore alertas em tempo real</p>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecionar Ativo</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rede</label>
-              <select
-                value={selectedNetwork}
-                onChange={(e) => {
-                  setSelectedNetwork(e.target.value)
-                  setSelectedAsset("")
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione uma rede</option>
-                {networks.map((network) => (
-                  <option key={network.id} value={network.id}>
-                    {network.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ativo</label>
-              <select
-                value={selectedAsset}
-                onChange={(e) => setSelectedAsset(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!selectedNetwork}
-              >
-                <option value="">Selecione um ativo</option>
-                {assets.map((asset) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {selectedAsset && (
-          <div className="space-y-8">
-            {/* Real-time Gauges */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <GaugeChart value={realTimeData.fluxo} min={50} max={80} label="Fluxo" unit="m³/min" />
-              <GaugeChart value={realTimeData.pressao} min={6.5} max={8.0} label="Pressão" unit="bar" />
-              <GaugeChart value={realTimeData.temperatura} min={35} max={55} label="Temperatura" unit="°C" />
-            </div>
-
-            {/* Create Alert */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Criar Novo Alerta</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                  <select
-                    value={newAlert.type}
-                    // CORREÇÃO 2: Substituir 'any' pelo tipo específico 'AlertType'
-                    onChange={(e) => setNewAlert({ ...newAlert, type: e.target.value as AlertType })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="fluxo">Fluxo</option>
-                    <option value="pressao">Pressão</option>
-                    <option value="temperatura">Temperatura</option>
-                  </select>
+        <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
+            <div className="relative z-10 max-w-7xl mx-auto">
+                <div className="mb-12">
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-100 flex items-center gap-3">
+                        <LayoutDashboard className="w-8 h-8"/>
+                        Dashboard de Alertas
+                    </h1>
+                    <p className="text-slate-300 mt-2 text-lg">
+                        Resumo geral do sistema de monitoramento e alertas da sua rede.
+                    </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Mínimo</label>
-                  <input
-                    type="number"
-                    value={newAlert.minValue}
-                    onChange={(e) => setNewAlert({ ...newAlert, minValue: Number(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Máximo</label>
-                  <input
-                    type="number"
-                    value={newAlert.maxValue}
-                    onChange={(e) => setNewAlert({ ...newAlert, maxValue: Number(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <button onClick={createAlert} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
-                    Criar Alerta
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Existing Alerts */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Alertas Configurados</h2>
-              {alerts.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Nenhum alerta configurado para este ativo</p>
-              ) : (
-                <div className="space-y-4">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium text-gray-900 capitalize">{alert.type}</h3>
-                        <p className="text-sm text-gray-600">
-                          Limite: {alert.minValue} - {alert.maxValue}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            alert.enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {alert.enabled ? "Ativo" : "Inativo"}
-                        </span>
-                      </div>
+                
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-48">
+                        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                ) : (
+                    <div className="space-y-12">
+                        {/* Seção de Resumo */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <SummaryCard 
+                                icon={Bell} 
+                                title="Alertas Ativos" 
+                                value={totalAlerts}
+                                description={`${alertData.critical} críticos, ${alertData.risk} de risco, ${alertData.low} baixos.`}
+                                color="blue"
+                            />
+                             <SummaryCard 
+                                icon={Server} 
+                                title="Equipamentos Monitorados" 
+                                value={assetCount}
+                                description="Total de ativos com monitoramento ativo."
+                                color="purple"
+                            />
+                             <SummaryCard 
+                                icon={Users} 
+                                title="Grupos de Contato" 
+                                value={deviceCount}
+                                description="Grupos configurados para receber alertas."
+                                color="green"
+                            />
+                        </div>
 
-        {!selectedAsset && (
-          <div className="bg-white rounded-xl p-12 shadow-sm border text-center">
-            <Gauge className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Selecione uma rede e um ativo para configurar alertas</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+                        {/* Seção de Ações Rápidas */}
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-200 mb-6">Ações Rápidas</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <ActionCard 
+                                    href="/system/client/alerts/threshold"
+                                    icon={Settings}
+                                    title="Definir Limites de Ativos"
+                                    description="Ajuste os valores de referência que disparam os alertas para cada equipamento."
+                                />
+                                <ActionCard 
+                                    href="/system/client/alerts/devices"
+                                    icon={UserPlus}
+                                    title="Gerenciar Contatos"
+                                    description="Adicione ou remova grupos de emails e celulares que recebem as notificações."
+                                />
+                                <ActionCard 
+                                    href="/system/client/alerts/panel"
+                                    icon={BarChart3}
+                                    title="Painel de Alertas"
+                                    description="Visualize o histórico completo de todos os alertas gerados pelo sistema."
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </main>
+    );
 }

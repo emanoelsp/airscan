@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/controllers/authcontroller";
-import { db } from "@/lib/model/firebase";
+import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { 
     ArrowLeft, Share2, HardDrive, Server, Eye, Loader2,

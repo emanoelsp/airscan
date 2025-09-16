@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/model/firebase";
+import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { Share2, HardDrive, Pencil, Trash2, ChevronDown, Loader2, Plus, Server, Eye } from "lucide-react";
 // Importando os alertas customizados

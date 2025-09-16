@@ -1,4 +1,4 @@
-import { db } from "../model/firebase";
+import { db } from "@/lib/firebase/firebaseconfig";
 import {
   collection,
   getDocs,
@@ -9,8 +9,6 @@ import {
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
-
-// --- INTERFACES ---
 
 export interface Asset {
   id: string;

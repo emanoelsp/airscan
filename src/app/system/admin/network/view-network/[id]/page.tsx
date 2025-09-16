@@ -5,21 +5,29 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/controllers/authcontroller";
 import networkController, { NetworkTopology, Asset } from "@/lib/controllers/networkcontroller";
-import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2 } from "lucide-react";
+// AJUSTE: Adicionados ícones para os status de anomalia
+import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Siren, CheckCircle2 } from "lucide-react";
 import * as AccountAlerts from "@/components/allerts/accountsallert";
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
 // --- INTERFACES ---
-interface RealTimeMetrics {
-  pressure: number;
+
+// AJUSTE: Interface para os dados da API com IA
+interface RealTimeDataAI {
+  pressao: number;
+  is_anomaly: boolean;
+  mse: number;
+  threshold: number;
   lastUpdate: string;
 }
 
 // FIX: Define a local type that extends the imported Asset interface.
-// This allows us to safely access properties that might not be on the base type.
 type AssetWithPressure = Asset & {
   maxPressure?: number;
 };
+
+// NOVO: Tipo para o status do consumo
+type ConsumptionStatus = 'normal' | 'anomaly' | 'risk';
 
 
 // --- COMPONENTES ---
@@ -59,6 +67,43 @@ function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedA
   );
 }
 
+// NOVO: Componente para exibir o status do consumo com base na anomalia
+function ConsumptionStatusDisplay({ status }: { status: ConsumptionStatus }) {
+  const statusConfig = {
+    normal: {
+      text: "Consumo Normal",
+      icon: CheckCircle2,
+      colorClasses: "bg-green-500/10 text-green-400",
+      iconColor: "text-green-400",
+    },
+    anomaly: {
+      text: "Alerta: Anomalia de consumo detectada",
+      icon: Siren,
+      colorClasses: "bg-orange-500/10 text-orange-400",
+      iconColor: "text-orange-400",
+    },
+    risk: {
+      text: "Alerta: Risco operacional detectado",
+      icon: Siren,
+      colorClasses: "bg-red-500/10 text-red-400 animate-pulse",
+      iconColor: "text-red-400",
+    },
+  };
+
+  const { text, icon: Icon, colorClasses, iconColor } = statusConfig[status];
+
+  return (
+    <div className={`flex justify-between items-center p-3 rounded-lg ${colorClasses}`}>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Icon className={`w-5 h-5 ${iconColor}`} />
+        <span>Status do Consumo</span>
+      </div>
+      <p className="font-semibold text-right">{text}</p>
+    </div>
+  );
+}
+
+
 export default function ViewNetworkPage() {
   const router = useRouter();
   const params = useParams();
@@ -68,8 +113,14 @@ export default function ViewNetworkPage() {
 
   const [network, setNetwork] = useState<NetworkTopology | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [realTimeData, setRealTimeData] = useState<RealTimeMetrics | null>(null);
+  // AJUSTE: Tipo de estado atualizado para a nova interface
+  const [realTimeData, setRealTimeData] = useState<RealTimeDataAI | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // NOVO: Estados para controlar a lógica de anomalia
+  const [consumptionStatus, setConsumptionStatus] = useState<ConsumptionStatus>('normal');
+  const [anomalyStartTime, setAnomalyStartTime] = useState<number | null>(null);
+
 
   useEffect(() => {
     if (!authLoading && account?.role !== 'admin') {
@@ -97,7 +148,11 @@ export default function ViewNetworkPage() {
   }, [networkId]);
 
   useEffect(() => {
+    // AJUSTE: Resetar todos os estados ao trocar de ativo
     setRealTimeData(null);
+    setConsumptionStatus('normal');
+    setAnomalyStartTime(null);
+
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
     }
@@ -109,28 +164,53 @@ export default function ViewNetworkPage() {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (!response.ok) throw new Error(`API retornou ${response.status}`);
+        
+        // AJUSTE: Lógica para processar a nova resposta da API
         const data = await response.json();
         
-        if (data && typeof data.nova_pressao !== 'undefined') {
-            const pressureValue = parseFloat(data.nova_pressao);
+        if (data && typeof data.pressao !== 'undefined' && typeof data.is_anomaly !== 'undefined') {
             setRealTimeData({
-              pressure: pressureValue,
+              pressao: parseFloat(data.pressao),
+              is_anomaly: data.is_anomaly,
+              mse: data.mse,
+              threshold: data.threshold,
               lastUpdate: new Date().toLocaleTimeString('pt-BR'),
             });
+
+            // NOVO: Lógica para definir o status do consumo
+            if (data.is_anomaly) {
+              const now = Date.now();
+              // Se é a primeira vez que a anomalia é detectada, marca o tempo
+              const startTime = anomalyStartTime ?? now;
+              if (!anomalyStartTime) {
+                setAnomalyStartTime(startTime);
+              }
+              // Verifica se a anomalia persiste por mais de 2 minutos (120000 ms)
+              if (now - startTime >= 120000) {
+                setConsumptionStatus('risk');
+              } else {
+                setConsumptionStatus('anomaly');
+              }
+            } else {
+              // Se não há anomalia, reseta o status e o timer
+              setConsumptionStatus('normal');
+              setAnomalyStartTime(null);
+            }
+
         } else {
             console.error("Resposta da API inválida.", data);
-            setRealTimeData(prev => ({ ...(prev || { pressure: 0 }), lastUpdate: "Dado inválido" })); 
+            setRealTimeData(prev => ({ ...(prev || { pressao: 0, is_anomaly: false, mse: 0, threshold: 0 }), lastUpdate: "Dado inválido" })); 
         }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
-        setRealTimeData(prev => ({ ...(prev || { pressure: 0 }), lastUpdate: "Falha" })); 
+        setRealTimeData(prev => ({ ...(prev || { pressao: 0, is_anomaly: false, mse: 0, threshold: 0 }), lastUpdate: "Falha" })); 
       }
     };
 
     fetchRealTimeData();
-    const interval = setInterval(fetchRealTimeData, 5000);
+    const interval = setInterval(fetchRealTimeData, 5000); // Busca a cada 5 segundos
     return () => clearInterval(interval);
-  }, [selectedAsset]);
+  }, [selectedAsset, anomalyStartTime]); // Adiciona anomalyStartTime como dependência
 
   if (authLoading || loading) {
     return (
@@ -153,7 +233,8 @@ export default function ViewNetworkPage() {
     );
   }
   
-  const gaugeData = [{ name: 'Pressure', value: realTimeData?.pressure || 0, fill: '#3b82f6' }];
+  // AJUSTE: usa 'pressao' ao invés de 'pressure'
+  const gaugeData = [{ name: 'Pressure', value: realTimeData?.pressao || 0, fill: '#3b82f6' }];
 
   return (
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
@@ -204,12 +285,16 @@ export default function ViewNetworkPage() {
                             <h4 className="font-semibold text-slate-200 mb-3">Dados em Tempo Real</h4>
                             {realTimeData ? (
                             <div className="space-y-3">
+                                {/* NOVO: Componente de status de consumo */}
+                                <ConsumptionStatusDisplay status={consumptionStatus} />
+                                
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
                                         <Gauge className="w-5 h-5 text-blue-400"/>
                                         <span>Pressão Atual</span>
                                     </div>
-                                    <p className="font-bold text-lg text-blue-400">{realTimeData.pressure.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
+                                    {/* AJUSTE: usa 'pressao' */}
+                                    <p className="font-bold text-lg text-blue-400">{realTimeData.pressao.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
                                 </div>
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
@@ -222,10 +307,10 @@ export default function ViewNetworkPage() {
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
-                                            {/* FIX: Cast to the local 'AssetWithPressure' type to safely access maxPressure. */}
                                             <PolarAngleAxis type="number" domain={[0, (selectedAsset as AssetWithPressure)?.maxPressure || 10]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
-                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressure.toFixed(2)}</text>
+                                            {/* AJUSTE: usa 'pressao' */}
+                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressao.toFixed(2)}</text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
                                         </RadialBarChart>
                                     </ResponsiveContainer>
@@ -246,4 +331,3 @@ export default function ViewNetworkPage() {
     </main>
   )
 }
-

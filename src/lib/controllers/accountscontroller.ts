@@ -1,4 +1,4 @@
-import { db, auth } from "../model/firebase"; // Ajuste o caminho se necessário
+import { db, auth } from "@/lib/firebase/firebaseconfig"; // Ajuste o caminho se necessário
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import {
   collection,

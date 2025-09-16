@@ -73,6 +73,7 @@ export default function CreateAssetPage() {
   const [networks, setNetworks] = useState<Network[]>([]);
   const [loading, setLoading] = useState(true);
   const [assetData, setAssetData] = useState<AssetCreationData>({
+    accountId: "", // FIX 1: Property added to initial state
     networkId: "", networkName: "", name: "", type: "compressor", model: "",
     description: "", location: "", maxPressure: "", powerRating: "",
     apiUrl: "", apiKey: "",
@@ -118,7 +119,10 @@ export default function CreateAssetPage() {
     const selectedNetwork = networks.find(n => n.id === networkId);
     if (selectedNetwork) {
       setAssetData(prev => ({
-        ...prev, networkId, networkName: selectedNetwork.name,
+        ...prev, 
+        accountId: selectedNetwork.accountId, // Also set accountId when network is selected
+        networkId, 
+        networkName: selectedNetwork.name,
         apiUrl: selectedNetwork.apiUrl || "",
         apiKey: selectedNetwork.apiKey || "",
       }));
@@ -136,7 +140,7 @@ export default function CreateAssetPage() {
       } else {
         throw new Error(`Status ${response.status}`);
       }
-    } catch { // AVISO CORRIGIDO: A variável 'error' foi removida pois não era utilizada.
+    } catch {
       setConnectionStatus("error");
       AccountAlerts.showError("Falha na conexão com a API.");
     } finally {
@@ -154,8 +158,15 @@ export default function CreateAssetPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    if (!account?.id) {
+        AccountAlerts.showError("Não foi possível identificar a conta de administrador. Por favor, tente novamente.");
+        setIsSubmitting(false);
+        return;
+    }
     try {
-      await assetsController.createAsset(assetData);
+      // FIX 2: Create a final payload with the correct admin accountId
+      const payload = { ...assetData, accountId: account.id };
+      await assetsController.createAsset(payload);
       await AccountAlerts.confirmAction({
           title: "Sucesso!", text: "O novo ativo foi criado.",
           icon: 'info', confirmButtonText: "OK"

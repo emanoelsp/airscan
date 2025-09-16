@@ -6,7 +6,7 @@ import {
     AlertTriangle, Bell, MessageSquare, Ticket, Users, UserX, Share2, 
     Wifi,  Server, Power, Loader2
 } from "lucide-react"
-import { db } from "@/lib/model/firebase"
+import { db } from "@/lib/firebase/firebaseconfig"
 import { collection, getDocs } from "firebase/firestore"
 
 // --- INTERFACES ---

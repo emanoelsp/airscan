@@ -11,8 +11,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Inicialização segura para evitar recriação em Next.js
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const db = getFirestore(app);
-export const auth = getAuth(app); // ADICIONADO: Exporta o serviço de autenticação
+export const auth = getAuth(app); 

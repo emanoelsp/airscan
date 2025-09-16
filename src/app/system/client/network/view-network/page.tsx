@@ -7,7 +7,7 @@ import networkController, { NetworkTopology, Asset } from "@/lib/controllers/net
 import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Share2 } from "lucide-react"
 import * as AccountAlerts from "@/components/allerts/accountsallert"
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
-import { db } from "@/lib/model/firebase"
+import { db } from "@/lib/firebase/firebaseconfig"
 import { collection, query, where, getDocs } from "firebase/firestore"
 
 // --- CONSTANTES ---
