@@ -1,57 +1,56 @@
 import { db } from "@/lib/firebase/firebaseconfig";
 import { 
-  doc, 
-  updateDoc, 
-  serverTimestamp, 
   collection, 
-  addDoc, 
-  getDocs, 
-  query,
-  where,
-  DocumentData 
+  query, 
+  where, 
+  getDocs,
+  doc,
+  updateDoc,
+  deleteField,
+  addDoc,
+  serverTimestamp,
+  DocumentData
 } from "firebase/firestore";
 
 // --- INTERFACES ---
 
-// Interface para um ativo, agora com os campos de limite
+export interface Network {
+  id: string;
+  clientId: string;
+  name: string;
+  // Adicione outros campos se necessário
+}
+
 export interface Asset {
   id: string;
   name: string;
-  type: "compressor" | "sensor" | "distributor" | string;
-  status: 'online' | 'offline' | 'maintenance';
   networkId: string;
   networkName: string;
-  accountId: string; // Adicionado para vincular o ativo à conta do cliente
-  location: string;
-  model: string;
-  apiKey: string;
-  apiUrl: string;
-  description: string;
-  maxPressure: number;
-  powerRating: number;
-  // Novos campos para limites de alerta
+
+  // Campos para limites de pressão (opcionais)
   limitLow?: number;
   limitNormal?: number;
   limitRisk?: number;
   limitCritical?: number;
+
+  // Campos de contato de alerta (opcionais)
+  contactName?: string;
+  contactEmails?: string[];
+  contactPhones?: string[];
+
+  // Outros campos do ativo
+  type?: "compressor" | "sensor" | "distributor" | string;
+  model?: string;
 }
 
-// Interface para uma rede
-export interface Network {
-  accountId: string;
-  id: string;
-  name: string;
-  location?: string;
-  description?: string;
-  apiUrl?: string;
-  apiKey?: string;
-}
+// Tipo para atualização de dados do ativo
+export type UpdateAssetData = Partial<Omit<Asset, 'id'>>;
 
-// Interface para criação de um novo ativo
+// Tipo para criação de um novo ativo
 export interface AssetCreationData {
   networkId: string;
   networkName: string;
-  accountId: string; // Garantir que o ID da conta seja salvo na criação
+  accountId: string; // ou clientId, dependendo do seu modelo
   name: string;
   type: "compressor" | "sensor" | "distributor";
   model: string;
@@ -63,55 +62,58 @@ export interface AssetCreationData {
   apiKey: string;
 }
 
-// Interface para os dados que podem ser atualizados
-export type UpdateAssetData = Partial<Omit<Asset, 'id' | 'networkId' | 'networkName' | 'accountId'>>;
 
-// --- CONTROLLER ---
+// --- LÓGICA INTERNA (SEPARADA PARA ROBUSTEZ) ---
+
+async function getNetworksByAccountId(accountId: string): Promise<Network[]> {
+  try {
+    const networksRef = collection(db, "airscan_networks");
+    const q = query(networksRef, where("clientId", "==", accountId));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as DocumentData),
+    })) as Network[];
+  } catch (error) {
+    console.error("Erro ao buscar redes da conta:", error);
+    throw new Error("Não foi possível carregar as redes.");
+  }
+}
+
+async function getAssetsByAccountId(accountId: string): Promise<Asset[]> {
+  try {
+    const clientNetworks = await getNetworksByAccountId(accountId);
+    if (clientNetworks.length === 0) return [];
+
+    const networkIds = clientNetworks.map(net => net.id);
+    
+    const assetsRef = collection(db, "airscan_assets");
+    // Nota: a cláusula 'in' do Firestore é limitada a 30 itens.
+    const q = query(assetsRef, where("networkId", "in", networkIds));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as DocumentData),
+    })) as Asset[];
+  } catch (error) {
+    console.error("Erro ao buscar ativos da conta:", error);
+    throw new Error("Não foi possível carregar os equipamentos.");
+  }
+}
+
+// --- OBJETO DO CONTROLLER ---
 
 const assetsController = {
-  /**
-   * Busca todas as redes da coleção 'airscan_networks'.
-   */
-  getNetworks: async (): Promise<Network[]> => {
-    try {
-      const networksRef = collection(db, "airscan_networks");
-      const snapshot = await getDocs(networksRef);
-      if (snapshot.empty) return [];
+  // Funções de busca
+  getNetworksByAccountId,
+  getAssetsByAccountId,
 
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as DocumentData),
-      })) as Network[];
-    } catch (error) {
-      console.error("Erro ao buscar redes:", error);
-      throw new Error("Não foi possível carregar as redes.");
-    }
-  },
-  
-  /**
-   * NOVA FUNÇÃO: Busca todos os ativos associados a um ID de conta de cliente.
-   */
-  getAssetsByAccountId: async (accountId: string): Promise<Asset[]> => {
-    try {
-      const assetsRef = collection(db, "airscan_assets");
-      const q = query(assetsRef, where("accountId", "==", accountId));
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) return [];
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as DocumentData),
-      })) as Asset[];
-    } catch (error) {
-      console.error("Erro ao buscar ativos da conta:", error);
-      throw new Error("Não foi possível carregar os equipamentos.");
-    }
-  },
-
-  /**
-   * Cria um novo ativo na coleção 'airscan_assets'.
-   */
+  // Função para criar um novo ativo
   createAsset: async (data: AssetCreationData): Promise<string> => {
     try {
       const assetsRef = collection(db, "airscan_assets");
@@ -130,9 +132,7 @@ const assetsController = {
     }
   },
 
-  /**
-   * Atualiza os dados de um ativo específico no Firestore.
-   */
+  // Função genérica que atualiza qualquer campo do ativo (incluindo limites e contatos)
   updateAsset: async (assetId: string, data: UpdateAssetData): Promise<void> => {
     try {
       const assetRef = doc(db, "airscan_assets", assetId);
@@ -143,6 +143,39 @@ const assetsController = {
     } catch (error) {
       console.error("Erro ao atualizar o ativo:", error);
       throw new Error("Não foi possível salvar as alterações do ativo.");
+    }
+  },
+
+  // Função específica para excluir os limites de um ativo
+  deleteAssetLimits: async (assetId: string): Promise<void> => {
+    try {
+      const assetRef = doc(db, "airscan_assets", assetId);
+      await updateDoc(assetRef, {
+        limitLow: deleteField(),
+        limitNormal: deleteField(),
+        limitRisk: deleteField(),
+        limitCritical: deleteField(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Erro ao excluir os limites do ativo:", error);
+      throw new Error("Não foi possível excluir os limites do ativo.");
+    }
+  },
+
+  // Função específica para excluir os contatos de um ativo
+  deleteAssetContacts: async (assetId: string): Promise<void> => {
+    try {
+      const assetRef = doc(db, "airscan_assets", assetId);
+      await updateDoc(assetRef, {
+        contactName: deleteField(),
+        contactEmails: deleteField(),
+        contactPhones: deleteField(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Erro ao excluir contatos do ativo:", error);
+      throw new Error("Não foi possível excluir os contatos do ativo.");
     }
   },
 };

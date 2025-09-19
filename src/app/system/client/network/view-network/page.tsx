@@ -4,20 +4,34 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/controllers/authcontroller"
 import networkController, { NetworkTopology, Asset } from "@/lib/controllers/networkcontroller"
-import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Share2 } from "lucide-react"
+// AJUSTE: Ícones adicionados para o status de consumo
+import { ArrowLeft, Cpu, Activity, Zap, Gauge, Clock, Loader2, Share2, Siren, CheckCircle2 } from "lucide-react"
 import * as AccountAlerts from "@/components/allerts/accountsallert"
-import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
+// AJUSTE: Adicionado PolarAngleAxis para o gauge
+import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts'
 import { db } from "@/lib/firebase/firebaseconfig"
 import { collection, query, where, getDocs } from "firebase/firestore"
 
 // --- CONSTANTES ---
 const REALTIME_UPDATE_INTERVAL_MS = 5000;
 
-// --- INTERFACES ---
-interface RealTimeMetrics {
-  pressure: number;
+// --- INTERFACES E TIPOS ---
+
+// AJUSTE: Interface para dados da API com IA
+interface RealTimeMetricsAI {
+  pressao: number;
+  is_anomaly: boolean;
   lastUpdate: string;
 }
+
+// AJUSTE: Adiciona maxPressure à interface Asset para uso no gauge
+interface AssetWithMaxPressure extends Asset {
+  maxPressure?: number;
+}
+
+// NOVO: Tipo para o status do consumo
+type ConsumptionStatus = 'normal' | 'anomaly' | 'risk';
+
 
 // --- SUB-COMPONENTES ---
 
@@ -56,16 +70,57 @@ function AssetNode({ asset, selectedAsset, onSelect }: { asset: Asset, selectedA
   );
 }
 
+// NOVO: Componente para exibir o status do consumo
+function ConsumptionStatusDisplay({ status }: { status: ConsumptionStatus }) {
+  const statusConfig = {
+    normal: {
+      text: "Consumo Normal",
+      icon: CheckCircle2,
+      colorClasses: "bg-green-500/10 text-green-400",
+      iconColor: "text-green-400",
+    },
+    anomaly: {
+      text: "Anomalia Detectada",
+      icon: Siren,
+      colorClasses: "bg-orange-500/10 text-orange-400",
+      iconColor: "text-orange-400",
+    },
+    risk: {
+      text: "Risco Operacional",
+      icon: Siren,
+      colorClasses: "bg-red-500/10 text-red-400 animate-pulse",
+      iconColor: "text-red-400",
+    },
+  };
+
+  const { text, icon: Icon, colorClasses, iconColor } = statusConfig[status];
+
+  return (
+    <div className={`flex justify-between items-center p-3 rounded-lg ${colorClasses}`}>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Icon className={`w-5 h-5 ${iconColor}`} />
+        <span>Status do Consumo</span>
+      </div>
+      <p className="font-semibold text-right">{text}</p>
+    </div>
+  );
+}
+
 // --- PÁGINA PRINCIPAL ---
 export default function ClientTopologyPage() {
   const { account, loading: authLoading } = useAuth();
   
   const [network, setNetwork] = useState<NetworkTopology | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [realTimeData, setRealTimeData] = useState<RealTimeMetrics | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetWithMaxPressure | null>(null);
+  // AJUSTE: Estado atualizado para a nova interface de dados
+  const [realTimeData, setRealTimeData] = useState<RealTimeMetricsAI | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Efeito para carregar os dados da rede do cliente
+  // NOVO: Estados para a lógica de anomalia
+  const [consumptionStatus, setConsumptionStatus] = useState<ConsumptionStatus>('normal');
+  const [anomalyStartTime, setAnomalyStartTime] = useState<number | null>(null);
+
+  // Efeito para carregar os dados da rede do cliente (sem alterações)
   useEffect(() => {
     if (authLoading || !account) return;
 
@@ -99,9 +154,13 @@ export default function ClientTopologyPage() {
   }, [account, authLoading]);
 
 
-  // Efeito para buscar dados da API em tempo real
+  // AJUSTE: Efeito para buscar dados da API com lógica de anomalia
   useEffect(() => {
+    // Reseta todos os estados ao trocar de ativo
     setRealTimeData(null);
+    setConsumptionStatus('normal');
+    setAnomalyStartTime(null);
+
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
     }
@@ -114,14 +173,36 @@ export default function ClientTopologyPage() {
           headers: { 'ngrok-skip-browser-warning': 'true' }
         });
         if (!response.ok) throw new Error(`API retornou ${response.status}`);
+        
         const data = await response.json();
         
-        if (data && typeof data.nova_pressao !== 'undefined') {
-            const pressureValue = parseFloat(data.nova_pressao);
+        // Lógica atualizada para processar 'pressao' e 'is_anomaly'
+        if (data && typeof data.pressao !== 'undefined' && typeof data.is_anomaly !== 'undefined') {
             setRealTimeData({
-              pressure: pressureValue,
+              pressao: parseFloat(data.pressao),
+              is_anomaly: data.is_anomaly,
               lastUpdate: new Date().toLocaleTimeString('pt-BR'),
             });
+
+            // NOVO: Lógica para definir o status do consumo
+            if (data.is_anomaly) {
+              const now = Date.now();
+              const startTime = anomalyStartTime ?? now;
+              if (!anomalyStartTime) {
+                setAnomalyStartTime(startTime);
+              }
+              // Se a anomalia persistir por 2 minutos (120000 ms), muda para 'risk'
+              if (now - startTime >= 120000) {
+                setConsumptionStatus('risk');
+              } else {
+                setConsumptionStatus('anomaly');
+              }
+            } else {
+              // Se não há anomalia, reseta o status
+              setConsumptionStatus('normal');
+              setAnomalyStartTime(null);
+            }
+
         } else {
             console.error("Resposta da API inválida.", data);
         }
@@ -133,7 +214,7 @@ export default function ClientTopologyPage() {
     fetchRealTimeData();
     const interval = setInterval(fetchRealTimeData, REALTIME_UPDATE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [selectedAsset]);
+  }, [selectedAsset, anomalyStartTime]); // Adiciona anomalyStartTime como dependência
 
   if (authLoading || loading) {
     return (
@@ -157,7 +238,8 @@ export default function ClientTopologyPage() {
     );
   }
   
-  const gaugeData = [{ name: 'Pressure', value: realTimeData?.pressure || 0, fill: '#3b82f6' }];
+  // AJUSTE: Usa 'pressao' ao invés de 'pressure'
+  const gaugeData = [{ name: 'Pressure', value: realTimeData?.pressao || 0, fill: '#3b82f6' }];
 
   return (
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
@@ -206,9 +288,13 @@ export default function ClientTopologyPage() {
                             <h4 className="font-semibold text-slate-200 mb-3">Dados em Tempo Real</h4>
                             {realTimeData ? (
                             <div className="space-y-3">
+                                {/* NOVO: Componente para exibir o status de consumo */}
+                                <ConsumptionStatusDisplay status={consumptionStatus} />
+
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 text-sm text-slate-300 font-medium"><Gauge className="w-5 h-5 text-blue-400"/><span>Pressão Atual</span></div>
-                                    <p className="font-bold text-lg text-blue-400">{realTimeData.pressure.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
+                                    {/* AJUSTE: usa 'pressao' */}
+                                    <p className="font-bold text-lg text-blue-400">{realTimeData.pressao.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
                                 </div>
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 text-sm text-slate-300 font-medium"><Clock className="w-5 h-5 text-slate-400"/><span>Última Atualização</span></div>
@@ -217,8 +303,11 @@ export default function ClientTopologyPage() {
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
+                                            {/* AJUSTE: Adiciona o eixo para definir o máximo do gauge */}
+                                            <PolarAngleAxis type="number" domain={[0, selectedAsset.maxPressure || 10]} angleAxisId={0} tick={false} />
                                             <RadialBar background dataKey="value" angleAxisId={0} />
-                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressure.toFixed(2)}</text>
+                                            {/* AJUSTE: usa 'pressao' */}
+                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressao.toFixed(2)}</text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
                                         </RadialBarChart>
                                     </ResponsiveContainer>

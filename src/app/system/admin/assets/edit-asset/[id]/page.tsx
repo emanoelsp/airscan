@@ -2,8 +2,8 @@
 
 import { useState, useEffect, ReactElement, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Asset, UpdateAssetData } from "@/lib/controllers/assetscontroller";
-import assetsController from "@/lib/controllers/assetscontroller";
+// CORREÇÃO: Renomeia a importação base para estendê-la localmente
+import assetsController, { Asset as BaseAsset, UpdateAssetData } from "@/lib/controllers/assetscontroller";
 import { showSuccess, showError } from "@/components/allerts/accountsallert";
 import {
   HardDrive,
@@ -19,6 +19,21 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+
+// --- INTERFACES LOCAIS ---
+
+// CORREÇÃO: Cria uma interface local completa para o Ativo, estendendo a base
+// Isso resolve o erro de tipo, pois adiciona as propriedades que faltavam.
+interface Asset extends BaseAsset {
+    location?: string;
+    description?: string;
+    maxPressure?: number;
+    powerRating?: number;
+    status?: 'online' | 'offline' | 'maintenance';
+    apiUrl?: string;
+    apiKey?: string;
+}
+
 
 // --- COMPONENTES DE FORMULÁRIO REUTILIZADOS ---
 
@@ -102,10 +117,12 @@ function AssetForm({
   asset,
   onSave,
   onCancel,
+  isSaving
 }: {
-  asset: Asset;
+  asset: Asset; // Usa a interface local completa
   onSave: (data: FormData) => void;
   onCancel: () => void;
+  isSaving: boolean;
 }) {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -158,8 +175,8 @@ function AssetForm({
       <div>
         <h2 className="text-xl font-semibold text-white">Conexão e Rede</h2>
         <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <InputField icon={KeyRound} id="apiKey" name="apiKey" label="API Key" placeholder="Chave de acesso da API" defaultValue={asset.apiKey} />
-            <InputField icon={Link2} id="apiUrl" name="apiUrl" label="URL da API" placeholder="https://api.example.com/data" defaultValue={asset.apiUrl} />
+            <InputField icon={KeyRound} id="apiKey" name="apiKey" label="API Key" placeholder="Chave de acesso da API" defaultValue={asset.apiKey} required={false} />
+            <InputField icon={Link2} id="apiUrl" name="apiUrl" label="URL da API" placeholder="https://api.example.com/data" defaultValue={asset.apiUrl} required={false} />
             <InputField icon={Server} id="networkName" name="networkName" label="Nome da Rede" placeholder="Rede servidor" defaultValue={asset.networkName} disabled={true} />
         </div>
       </div>
@@ -171,9 +188,11 @@ function AssetForm({
           </button>
           <button
             type="submit"
-            className="flex justify-center rounded-lg bg-yellow-400 px-8 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500"
+            disabled={isSaving}
+            className="flex justify-center items-center rounded-lg bg-yellow-400 px-8 py-3 text-sm font-bold leading-6 text-slate-900 shadow-lg shadow-yellow-400/20 transition-all hover:scale-105 hover:bg-yellow-500 disabled:bg-slate-600 disabled:cursor-not-allowed"
           >
-            Salvar Alterações
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+            {isSaving ? "Salvando..." : "Salvar Alterações"}
           </button>
         </div>
       </div>
@@ -185,8 +204,9 @@ function AssetForm({
 function EditAssetPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [asset, setAsset] = useState<Asset | null>(null);
+  const [asset, setAsset] = useState<Asset | null>(null); // Usa a interface local
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const assetDataString = searchParams.get("data");
@@ -208,15 +228,25 @@ function EditAssetPage() {
 
   const handleSave = async (formData: FormData) => {
     if (!asset) return;
+    setIsSaving(true);
 
     const rawData = Object.fromEntries(formData.entries());
-    const dataToUpdate: UpdateAssetData = {
-        ...rawData,
+    
+    // CORREÇÃO: Constrói o objeto de atualização explicitamente e o converte para o tipo esperado.
+    // Isso garante que todos os campos sejam incluídos e que os tipos numéricos sejam tratados corretamente,
+    // resolvendo o erro de compilação.
+    const dataToUpdate = {
+        name: rawData.name as string,
+        model: rawData.model as string,
+        type: rawData.type as string,
+        location: rawData.location as string,
+        description: rawData.description as string,
         maxPressure: Number(rawData.maxPressure),
         powerRating: Number(rawData.powerRating),
         status: rawData.status as 'online' | 'offline' | 'maintenance',
-        type: rawData.type as string, // Garantir que o tipo seja string
-    };
+        apiKey: rawData.apiKey as string,
+        apiUrl: rawData.apiUrl as string,
+    } as UpdateAssetData;
     
     try {
       await assetsController.updateAsset(asset.id, dataToUpdate);
@@ -225,6 +255,8 @@ function EditAssetPage() {
     } catch (err) {
       showError("Ocorreu um erro ao salvar as alterações.");
       console.error(err);
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -254,7 +286,7 @@ function EditAssetPage() {
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
         <div className="relative z-10 max-w-4xl mx-auto">
-            <AssetForm asset={asset} onSave={handleSave} onCancel={handleCancel} />
+            <AssetForm asset={asset} onSave={handleSave} onCancel={handleCancel} isSaving={isSaving} />
         </div>
     </main>
   );
@@ -272,3 +304,4 @@ export default function EditAssetPageWrapper() {
         </Suspense>
     )
 }
+

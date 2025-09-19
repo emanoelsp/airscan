@@ -28,6 +28,22 @@ const nextConfig: NextConfig = {
         destination: '/pages/login',
       },
 
+
+
+      // URLS do sistema do visão do cliente
+       {
+        source: '/sistema/alertas',
+        destination: '/system/client/alerts',
+      },
+       {
+        source: '/sistema/alertas/cadastra_limites',
+        destination: '/system/client/alerts/register_thresholds',
+      },
+       {
+        source: '/sistema/alertas/cadastra_recebimento',
+        destination: '/system/client/alerts/register_receipt',
+      },
+
     ];
   },
 };

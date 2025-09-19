@@ -8,8 +8,20 @@ import {
     Server, Type, MapPin, Gauge, Zap, Link2, KeyRound 
 } from "lucide-react";
 import { useAuth } from "@/lib/controllers/authcontroller";
-import assetsController, { Network, AssetCreationData } from "@/lib/controllers/assetscontroller";
+import networkController from "@/lib/controllers/networkcontroller";
+// CORREÇÃO: Renomeia a importação para evitar conflito e estendê-la localmente
+import assetsController, { Network as BaseNetwork, AssetCreationData } from "@/lib/controllers/assetscontroller";
 import * as AccountAlerts from "@/components/allerts/accountsallert";
+
+
+// --- TIPOS E INTERFACES LOCAIS ---
+
+// CORREÇÃO: Cria uma interface local mais completa para o estado, estendendo a base
+interface Network extends BaseNetwork {
+    location?: string;
+    apiUrl?: string;
+    apiKey?: string;
+}
 
 
 // --- COMPONENTES DE FORMULÁRIO REUTILIZADOS ---
@@ -70,10 +82,11 @@ export default function CreateAssetPage() {
   const { account, loading: authLoading } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(1);
+  // CORREÇÃO: Usa a interface local mais completa para o estado
   const [networks, setNetworks] = useState<Network[]>([]);
   const [loading, setLoading] = useState(true);
   const [assetData, setAssetData] = useState<AssetCreationData>({
-    accountId: "", // FIX 1: Property added to initial state
+    accountId: "", 
     networkId: "", networkName: "", name: "", type: "compressor", model: "",
     description: "", location: "", maxPressure: "", powerRating: "",
     apiUrl: "", apiKey: "",
@@ -91,9 +104,11 @@ export default function CreateAssetPage() {
   useEffect(() => {
     async function fetchNetworks() {
       try {
-        const networksList = await assetsController.getNetworks();
-        setNetworks(networksList);
-      } catch {
+        const networksList = await networkController.getNetworkSummaries();
+        // CORREÇÃO: Faz o cast para a interface local
+        setNetworks(networksList as Network[]);
+      } catch (error) {
+        console.error("Falha ao buscar redes:", error);
         AccountAlerts.showError("Falha ao buscar redes.");
       } finally {
         setLoading(false);
@@ -116,11 +131,12 @@ export default function CreateAssetPage() {
   };
 
   const handleNetworkChange = (networkId: string) => {
+    // CORREÇÃO: O cast não é mais necessário aqui, pois o estado já tem o tipo correto
     const selectedNetwork = networks.find(n => n.id === networkId);
     if (selectedNetwork) {
       setAssetData(prev => ({
         ...prev, 
-        accountId: selectedNetwork.accountId, // Also set accountId when network is selected
+        accountId: selectedNetwork.clientId, 
         networkId, 
         networkName: selectedNetwork.name,
         apiUrl: selectedNetwork.apiUrl || "",
@@ -140,7 +156,8 @@ export default function CreateAssetPage() {
       } else {
         throw new Error(`Status ${response.status}`);
       }
-    } catch {
+    } catch (error) {
+      console.error("Falha na conexão com a API:", error);
       setConnectionStatus("error");
       AccountAlerts.showError("Falha na conexão com a API.");
     } finally {
@@ -158,15 +175,13 @@ export default function CreateAssetPage() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    if (!account?.id) {
-        AccountAlerts.showError("Não foi possível identificar a conta de administrador. Por favor, tente novamente.");
+    if (!assetData.accountId) {
+        AccountAlerts.showError("Não foi possível identificar o cliente associado a esta rede.");
         setIsSubmitting(false);
         return;
     }
     try {
-      // FIX 2: Create a final payload with the correct admin accountId
-      const payload = { ...assetData, accountId: account.id };
-      await assetsController.createAsset(payload);
+      await assetsController.createAsset(assetData);
       await AccountAlerts.confirmAction({
           title: "Sucesso!", text: "O novo ativo foi criado.",
           icon: 'info', confirmButtonText: "OK"
@@ -233,6 +248,7 @@ export default function CreateAssetPage() {
                           <div key={network.id} onClick={() => handleNetworkChange(network.id)}
                             className={`rounded-lg p-4 cursor-pointer transition-all border-2 ${ assetData.networkId === network.id ? "border-blue-500 bg-blue-500/10" : "border-slate-700 bg-slate-800/50 hover:border-slate-600" }`}>
                             <h3 className="font-medium text-slate-100">{network.name}</h3>
+                            {/* CORREÇÃO: @ts-ignore removido pois o tipo agora está correto */}
                             <p className="text-sm text-slate-400 mt-1">{network.location || "Sem localização"}</p>
                           </div>
                         ))}
@@ -311,3 +327,4 @@ export default function CreateAssetPage() {
     </main>
   );
 }
+

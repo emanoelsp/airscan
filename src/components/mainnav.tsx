@@ -100,13 +100,14 @@ const clientNav: NavItem[] = [
       { name: "Consultar chamados", href: "/system/client/tickets/search-ticket" },
     ],
   },
+  // CORREÇÃO: Links e nomes atualizados para corresponder às páginas criadas
   {
     name: "Alertas",
     href: "/system/client/alerts",
     icon: Bell,
     submenu: [
-      { name: "Configurar Limites para os Ativos", href: "/system/client/alerts/thresholds" },
-      { name: "Configurar Dispositivos de Recebimento", href: "/system/client/alerts/dispositives" },
+      { name: "Configurar Contatos", href: "/system/client/alerts" },
+      { name: "Configurar Limites", href: "/system/client/alerts/thresholds" },
     ],
   },
 ]
@@ -326,6 +327,7 @@ const SideBar = ({ navItems, isAdmin = false }: { navItems: NavItem[]; isAdmin?:
 }
 
 // --- Bottom Navigation Bar Component ---
+// CORREÇÃO: Removido o prop 'isAdmin' que não era utilizado, resolvendo o warning.
 const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
   const pathname = usePathname()
 
@@ -391,3 +393,4 @@ export function MainNav({ account, currentUser, showBottomNav = false }: MainNav
     )
   }
 }
+

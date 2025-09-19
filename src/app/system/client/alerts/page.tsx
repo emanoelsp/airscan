@@ -4,7 +4,6 @@ import { useState, useEffect, ElementType } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/controllers/authcontroller";
 import assetsController from "@/lib/controllers/assetscontroller";
-import dispositivesController from "@/lib/controllers/dispositivescontroller";
 import { 
     LayoutDashboard, 
     Bell, 
@@ -77,10 +76,10 @@ export default function AlertsDashboardPage() {
     const { account, loading: authLoading } = useAuth();
     
     const [assetCount, setAssetCount] = useState<number>(0);
-    const [deviceCount, setDeviceCount] = useState<number>(0);
+    const [contactGroupCount, setContactGroupCount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(true);
     
-    // Mock de dados de alertas
+    // Mock de dados de alertas - você pode substituir por dados reais
     const alertData = { low: 5, risk: 2, critical: 1 };
     const totalAlerts = alertData.low + alertData.risk + alertData.critical;
 
@@ -89,12 +88,16 @@ export default function AlertsDashboardPage() {
             const fetchData = async () => {
                 setIsLoading(true);
                 try {
-                    const [assets, devices] = await Promise.all([
-                        assetsController.getAssetsByAccountId(account.id),
-                        dispositivesController.getDevicesByAccountId(account.id)
-                    ]);
+                    // Lógica simplificada: busca apenas os ativos
+                    const assets = await assetsController.getAssetsByAccountId(account.id);
+                    
+                    // A contagem de ativos é o total de itens na lista
                     setAssetCount(assets.length);
-                    setDeviceCount(devices.length);
+                    
+                    // A contagem de grupos é o número de ativos que têm um grupo de contato definido
+                    const groupsCount = assets.filter(asset => asset.contactName && asset.contactName.trim() !== '').length;
+                    setContactGroupCount(groupsCount);
+
                 } catch (error) {
                     console.error("Falha ao carregar dados do dashboard:", error);
                 } finally {
@@ -144,8 +147,8 @@ export default function AlertsDashboardPage() {
                              <SummaryCard 
                                 icon={Users} 
                                 title="Grupos de Contato" 
-                                value={deviceCount}
-                                description="Grupos configurados para receber alertas."
+                                value={contactGroupCount}
+                                description="Grupos configurados em equipamentos."
                                 color="green"
                             />
                         </div>
@@ -155,16 +158,16 @@ export default function AlertsDashboardPage() {
                             <h2 className="text-2xl font-bold text-slate-200 mb-6">Ações Rápidas</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <ActionCard 
-                                    href="/system/client/alerts/threshold"
+                                    href="/system/client/alerts/register_thresholds"
                                     icon={Settings}
                                     title="Definir Limites de Ativos"
                                     description="Ajuste os valores de referência que disparam os alertas para cada equipamento."
                                 />
                                 <ActionCard 
-                                    href="/system/client/alerts/devices"
+                                    href="/system/client/alerts"
                                     icon={UserPlus}
                                     title="Gerenciar Contatos"
-                                    description="Adicione ou remova grupos de emails e celulares que recebem as notificações."
+                                    description="Adicione ou remova grupos de contatos associados a cada equipamento."
                                 />
                                 <ActionCard 
                                     href="/system/client/alerts/panel"
