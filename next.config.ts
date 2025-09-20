@@ -31,16 +31,33 @@ const nextConfig: NextConfig = {
 
 
       // URLS do sistema do visão do cliente
-       {
+
+
+      // sistema de suporte
+      {
+        source: '/sistema/suporte',
+        destination: '/system/client/support',
+      },
+      {
+        source: '/sistema/suporte/cadastrar-chamados',
+        destination: '/system/client/support/ticket_register',
+      },
+      {
+        source: '/sistema/suporte/consultar-chamados',
+        destination: '/system/client/support/ticket_view',
+      },
+
+      // sistema de alertas
+      {
         source: '/sistema/alertas',
         destination: '/system/client/alerts',
       },
-       {
-        source: '/sistema/alertas/cadastra-limites',
+      {
+        source: '/sistema/alertas/cadastrar-limites',
         destination: '/system/client/alerts/register_thresholds',
       },
-       {
-        source: '/sistema/alertas/cadastra-recebimento',
+      {
+        source: '/sistema/alertas/cadastrar-recebimento',
         destination: '/system/client/alerts/register_receipt',
       },
 

@@ -1,40 +1,114 @@
 import { db } from "@/lib/firebase/firebaseconfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  where, 
+  serverTimestamp, 
+  Timestamp,
+  orderBy,
+  runTransaction,
+  doc
+} from "firebase/firestore";
 
-// Define a estrutura dos dados de um ticket de suporte
-export interface SupportTicketData {
-  name: string;
-  email: string;
-  company?: string;
-  ticketType: string;
-  message: string;
-  status?: 'open' | 'in_progress' | 'closed';
-  userId?: string; // Para vincular o ticket a um usuário autenticado
-  createdAt?: undefined; // Será preenchido pelo servidor do Firestore
+// --- INTERFACES ---
+
+export interface TicketUpdate {
+  comment: string;
+  updatedBy: string; // Nome do admin ou "Cliente"
+  timestamp: Timestamp;
 }
 
-/**
- * Salva uma nova mensagem de ticket de suporte no Firestore.
- * @param ticketData - Os dados do ticket a serem salvos.
- * @returns Um objeto indicando sucesso ou falha.
- */
-export const saveSupportTicket = async (ticketData: Omit<SupportTicketData, 'createdAt' | 'status'>): Promise<{ success: boolean; error?: string }> => {
-  // Validação básica para garantir que os campos essenciais estão preenchidos
-  if (!ticketData.name || !ticketData.email || !ticketData.ticketType || !ticketData.message) {
-    return { success: false, error: "Por favor, preencha todos os campos obrigatórios." };
-  }
+export interface SupportTicket {
+  id: string;
+  ticketNumber: number;
+  accountId: string;
+  contactName: string;
+  email: string;
+  companyName: string;
+  networkId: string;
+  assetId: string;
+  priority: 'low' | 'normal' | 'high' | 'critical';
+  issueType: string;
+  subject: string;
+  description: string;
+  errorCode?: string;
+  operatorObservation?: string;
+  status: 'open' | 'in_progress' | 'closed';
+  createdAt: Timestamp;
+  updates?: TicketUpdate[];
+}
 
-  try {
-    // Adiciona o documento à coleção 'airscan_support'
-    await addDoc(collection(db, "airscan_support"), {
-      ...ticketData,
-      status: 'open', // Define o status inicial como 'aberto'
-      createdAt: serverTimestamp(), // Adiciona um timestamp do lado do servidor
-    });
-    return { success: true };
-  } catch (error) {
-    console.error("Erro ao adicionar documento ao Firestore: ", error);
-    // Retorna uma mensagem de erro genérica para o usuário
-    return { success: false, error: "Não foi possível enviar o ticket de suporte. Tente novamente mais tarde." };
-  }
+// Tipo para dados de criação, antes de irem para o DB
+export type TicketCreationData = Omit<SupportTicket, "id" | "ticketNumber" | "status" | "createdAt" | "updates">;
+
+const TICKETS_COLLECTION = "airscan_support_tickets";
+
+// --- LÓGICA DO CONTROLLER ---
+
+const supportController = {
+
+  /**
+   * Cria um novo ticket de suporte, gerando um número sequencial.
+   */
+  createTicket: async (data: TicketCreationData): Promise<string> => {
+    try {
+      // Gera um número de ticket sequencial de forma segura (usando transação)
+      const counterRef = doc(db, "airscan_counters", "supportTicketCounter");
+      let newTicketNumber = 1;
+
+      await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        if (counterDoc.exists()) {
+          newTicketNumber = counterDoc.data().lastNumber + 1;
+          transaction.update(counterRef, { lastNumber: newTicketNumber });
+        } else {
+          transaction.set(counterRef, { lastNumber: 1 });
+        }
+      });
+      
+      const ticketsRef = collection(db, TICKETS_COLLECTION);
+      const docRef = await addDoc(ticketsRef, {
+        ...data,
+        ticketNumber: newTicketNumber,
+        status: "open",
+        createdAt: serverTimestamp(),
+        updates: [],
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error("Erro ao criar chamado:", error);
+      throw new Error("Não foi possível registrar o chamado de suporte.");
+    }
+  },
+
+  /**
+   * Busca todos os tickets de suporte associados a uma conta de cliente.
+   */
+  getTicketsByAccountId: async (accountId: string): Promise<SupportTicket[]> => {
+    try {
+      const ticketsRef = collection(db, TICKETS_COLLECTION);
+      const q = query(
+        ticketsRef, 
+        where("accountId", "==", accountId),
+        orderBy("createdAt", "desc")
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        return [];
+      }
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as SupportTicket[];
+    } catch (error) {
+      console.error("Erro ao buscar chamados da conta:", error);
+      throw new Error("Não foi possível carregar o histórico de chamados.");
+    }
+  },
 };
+
+export default supportController;

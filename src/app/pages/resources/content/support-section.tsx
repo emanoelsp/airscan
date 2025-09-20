@@ -1,46 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react'; // CORREÇÃO: Removido 'useEffect' que não era usado.
+import Link from 'next/link'; // CORREÇÃO: Adicionada a importação do Link.
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/controllers/authcontroller';
-import { saveSupportTicket } from '@/lib/controllers/supportcontroller';
+import supportController, { TicketCreationData } from '@/lib/controllers/supportcontroller';
 import { Send, CheckCircle, Loader2, LogIn } from 'lucide-react';
 
 // Define a estrutura local do estado do formulário
 interface SupportFormData {
-  name: string;
-  email: string;
-  company: string;
-  ticketType: string;
+  subject: string;
   message: string;
 }
 
 export default function SupportSection() {
-  const { currentUser } = useAuth(); // Hook para obter o estado de autenticação
+  const { account, loading: authLoading } = useAuth(); // Hook para obter os dados da conta
   const router = useRouter();
   
   const [formData, setFormData] = useState<SupportFormData>({
-    name: '',
-    email: '',
-    company: '',
-    ticketType: '',
+    subject: '',
     message: '',
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
-
-  // Efeito para preencher o formulário com dados do usuário quando ele faz login
-  useEffect(() => {
-    if (currentUser) {
-      setFormData(prev => ({
-        ...prev,
-        name: currentUser.displayName || '',
-        email: currentUser.email || '',
-      }));
-    }
-  }, [currentUser]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -51,35 +35,44 @@ export default function SupportSection() {
     e.preventDefault();
     setError('');
 
-    // Passo 1: Verifica se o usuário está logado antes de continuar
-    if (!currentUser) {
+    if (!account) {
       setError("Você precisa estar logado para enviar um ticket de suporte.");
       return;
     }
 
     setIsSubmitting(true);
     
-    // Envia os dados para o controller, incluindo o ID do usuário
-    const result = await saveSupportTicket({
-        ...formData,
-        userId: currentUser.uid,
-    });
+    const ticketPayload: TicketCreationData = {
+      accountId: account.id,
+      contactName: account.contactName,
+      email: account.email,
+      companyName: account.companyName,
+      subject: formData.subject,
+      description: formData.message,
+      networkId: 'N/A',
+      assetId: 'N/A',
+      priority: 'normal',
+      issueType: 'general',
+    };
 
-    setIsSubmitting(false);
-
-    if (result.success) {
+    try {
+      await supportController.createTicket(ticketPayload);
       setIsSubmitted(true);
-      // Limpa os campos do formulário, mantendo os dados do usuário
-      setFormData(prev => ({
-          ...prev,
-          company: '',
-          ticketType: '',
-          message: '',
-      }));
-    } else {
-      setError(result.error || 'Ocorreu um erro desconhecido.');
+      setFormData({ subject: '', message: '' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+  
+  if(authLoading) {
+      return (
+          <div className="flex justify-center items-center py-40 bg-gray-50">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+          </div>
+      )
+  }
 
   return (
     <section id="suporte" className="bg-gray-50 pt-20">
@@ -98,20 +91,24 @@ export default function SupportSection() {
               <div className="text-center py-12">
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Ticket de Suporte Enviado!</h3>
-                <p className="text-gray-600 mb-6">Recebemos sua solicitação. Nossa equipe técnica entrará em contato em breve.</p>
-                <button
-                  onClick={() => setIsSubmitted(false)}
-                  className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Abrir Novo Ticket
-                </button>
+                <p className="text-gray-600 mb-6">Recebemos sua solicitação. Você pode acompanhar seu chamado na sua Central de Suporte.</p>
+                <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => setIsSubmitted(false)}
+                      className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Abrir Novo Ticket
+                    </button>
+                    <Link href="/sistema/suporte/consultar-chamados" className="bg-gray-200 text-gray-800 font-semibold px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors">
+                        Ver Meus Chamados
+                    </Link>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">Abrir um Ticket de Suporte</h3>
                 
-                {/* Alerta para usuários não logados */}
-                {!currentUser && (
+                {!account && (
                     <div className="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-r-lg">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
@@ -123,7 +120,7 @@ export default function SupportSection() {
                                     <button type="button" onClick={() => router.push('/login')} className="font-bold underline hover:text-yellow-800">
                                         faça login
                                     </button>
-                                    {' '}para abrir um ticket.
+                                    {' '}para abrir um ticket. Seus dados serão preenchidos automaticamente.
                                 </p>
                             </div>
                         </div>
@@ -133,35 +130,23 @@ export default function SupportSection() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Seu Nome *</label>
-                    <input name="name" type="text" value={formData.name} onChange={handleInputChange} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed" required disabled={!!currentUser} />
+                    <input name="name" type="text" value={account?.contactName || ''} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed" required disabled />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Seu Email *</label>
-                    <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed" required disabled={!!currentUser} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Empresa</label>
-                    <input name="company" type="text" value={formData.company} onChange={handleInputChange} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Solicitação *</label>
-                    <select name="ticketType" value={formData.ticketType} onChange={handleInputChange} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                      <option value="">Selecione o tipo</option>
-                      <option value="technical_issue">Problema Técnico</option>
-                      <option value="data_question">Dúvida sobre Dados</option>
-                      <option value="feature_request">Sugestão de Melhoria</option>
-                      <option value="other">Outro</option>
-                    </select>
+                    <input name="email" type="email" value={account?.email || ''} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed" required disabled />
                   </div>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Assunto *</label>
+                  <input name="subject" value={formData.subject} onChange={handleInputChange} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Ex: Dúvida sobre o relatório de consumo" required />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Descreva sua solicitação *</label>
-                  <textarea name="message" value={formData.message} onChange={handleInputChange} rows={6} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Por favor, forneça o máximo de detalhes possível, incluindo o ID do compressor, se aplicável..." required />
+                  <textarea name="message" value={formData.message} onChange={handleInputChange} rows={6} className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Por favor, forneça o máximo de detalhes possível..." required />
                 </div>
                 {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                <button type="submit" disabled={isSubmitting || !currentUser} className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors ${ isSubmitting || !currentUser ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700" } text-white`}>
+                <button type="submit" disabled={isSubmitting || !account} className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors ${ isSubmitting || !account ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700" } text-white`}>
                   {isSubmitting ? (<><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Enviando...</>) : (<><Send className="w-5 h-5 mr-2" />Enviar Ticket</>)}
                 </button>
               </form>
@@ -172,3 +157,4 @@ export default function SupportSection() {
     </section>
   );
 }
+

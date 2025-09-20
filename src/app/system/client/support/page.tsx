@@ -3,16 +3,14 @@
 import { useState, useEffect, ElementType } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/controllers/authcontroller";
-import assetsController from "@/lib/controllers/assetscontroller";
+import supportController from "@/lib/controllers/supportcontroller";
 import { 
     LayoutDashboard, 
-    Bell, 
-    Server, 
-    Users, 
+    LifeBuoy,
+    FileText,
+    FilePlus,
+    History,
     ArrowRight, 
-    Settings, 
-    UserPlus,
-    BarChart3,
     Loader2 
 } from "lucide-react";
 
@@ -32,7 +30,6 @@ interface ActionCardProps {
     title: string;
     description: string;
 }
-
 
 // --- SUB-COMPONENTES ---
 
@@ -69,56 +66,44 @@ function ActionCard({ href, icon: Icon, title, description }: ActionCardProps) {
     );
 }
 
-
 // --- PÁGINA PRINCIPAL ---
 
-export default function AlertsDashboardPage() {
+export default function SupportDashboardPage() {
     const { account, loading: authLoading } = useAuth();
-    
-    const [assetCount, setAssetCount] = useState<number>(0);
-    const [contactGroupCount, setContactGroupCount] = useState<number>(0);
+    const [summary, setSummary] = useState({ open: 0, inProgress: 0, closed: 0 });
     const [isLoading, setIsLoading] = useState(true);
-    
-    // Mock de dados de alertas - você pode substituir por dados reais
-    const alertData = { low: 5, risk: 2, critical: 1 };
-    const totalAlerts = alertData.low + alertData.risk + alertData.critical;
 
     useEffect(() => {
         if (!authLoading && account?.id) {
-            const fetchData = async () => {
+            const fetchTickets = async () => {
                 setIsLoading(true);
                 try {
-                    // Lógica simplificada: busca apenas os ativos
-                    const assets = await assetsController.getAssetsByAccountId(account.id);
-                    
-                    // A contagem de ativos é o total de itens na lista
-                    setAssetCount(assets.length);
-                    
-                    // A contagem de grupos é o número de ativos que têm um grupo de contato definido
-                    const groupsCount = assets.filter(asset => asset.contactName && asset.contactName.trim() !== '').length;
-                    setContactGroupCount(groupsCount);
-
+                    const tickets = await supportController.getTicketsByAccountId(account.id);
+                    const open = tickets.filter(t => t.status === 'open').length;
+                    const inProgress = tickets.filter(t => t.status === 'in_progress').length;
+                    const closed = tickets.filter(t => t.status === 'closed').length;
+                    setSummary({ open, inProgress, closed });
                 } catch (error) {
-                    console.error("Falha ao carregar dados do dashboard:", error);
+                    console.error("Falha ao carregar chamados:", error);
                 } finally {
                     setIsLoading(false);
                 }
             };
-            fetchData();
+            fetchTickets();
         }
     }, [account, authLoading]);
 
     return (
         <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-purple-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
             <div className="relative z-10 max-w-7xl mx-auto">
                 <div className="mb-12">
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-100 flex items-center gap-3">
                         <LayoutDashboard className="w-8 h-8"/>
-                        Dashboard de Alertas
+                        Central de Suporte
                     </h1>
                     <p className="text-slate-300 mt-2 text-lg">
-                        Resumo geral do sistema de monitoramento e alertas da sua rede.
+                        Abra e acompanhe seus chamados de suporte técnico.
                     </p>
                 </div>
                 
@@ -131,49 +116,43 @@ export default function AlertsDashboardPage() {
                         {/* Seção de Resumo */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <SummaryCard 
-                                icon={Bell} 
-                                title="Alertas Ativos" 
-                                value={totalAlerts}
-                                description={`${alertData.critical} críticos, ${alertData.risk} de risco, ${alertData.low} baixos.`}
+                                icon={FileText} 
+                                title="Chamados Abertos" 
+                                value={summary.open}
+                                description="Aguardando atendimento inicial."
                                 color="blue"
                             />
                              <SummaryCard 
-                                icon={Server} 
-                                title="Equipamentos Monitorados" 
-                                value={assetCount}
-                                description="Total de ativos com monitoramento ativo."
+                                icon={LifeBuoy} 
+                                title="Em Andamento" 
+                                value={summary.inProgress}
+                                description="Nossa equipe já está trabalhando no seu caso."
                                 color="purple"
                             />
                              <SummaryCard 
-                                icon={Users} 
-                                title="Grupos de Contato" 
-                                value={contactGroupCount}
-                                description="Grupos configurados em equipamentos."
+                                icon={History} 
+                                title="Resolvidos" 
+                                value={summary.closed}
+                                description="Chamados já concluídos."
                                 color="green"
                             />
                         </div>
 
                         {/* Seção de Ações Rápidas */}
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-200 mb-6">Ações Rápidas</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <h2 className="text-2xl font-bold text-slate-200 mb-6">O que você precisa?</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <ActionCard 
-                                    href="/sistema/alertas/cadastra-limites"
-                                    icon={Settings}
-                                    title="Definir Limites de Ativos"
-                                    description="Ajuste os valores de referência que disparam os alertas para cada equipamento."
+                                    href="/system/client/support/ticket_register"
+                                    icon={FilePlus}
+                                    title="Abrir Novo Chamado"
+                                    description="Precisa de ajuda? Registre um novo ticket para nossa equipe de suporte."
                                 />
                                 <ActionCard 
-                                    href="/sistema/alertas/cadastra-recebimento"
-                                    icon={UserPlus}
-                                    title="Gerenciar Contatos"
-                                    description="Adicione ou remova grupos de contatos associados a cada equipamento."
-                                />
-                                <ActionCard 
-                                    href="/sistema/alertas"
-                                    icon={BarChart3}
-                                    title="Painel de Alertas"
-                                    description="Visualize o histórico completo de todos os alertas gerados pelo sistema."
+                                    href="/system/client/support/ticket_view"
+                                    icon={History}
+                                    title="Consultar Meus Chamados"
+                                    description="Acompanhe o andamento e o histórico de todos os seus tickets de suporte."
                                 />
                             </div>
                         </div>
