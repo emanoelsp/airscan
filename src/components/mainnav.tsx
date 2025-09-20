@@ -103,11 +103,11 @@ const clientNav: NavItem[] = [
   // CORREÇÃO: Links e nomes atualizados para corresponder às páginas criadas
   {
     name: "Alertas",
-    href: "/system/client/alerts",
+    href: "/sistema/alertas",
     icon: Bell,
     submenu: [
-      { name: "Configurar Contatos", href: "/system/client/alerts" },
-      { name: "Configurar Limites", href: "/system/client/alerts/thresholds" },
+      { name: "Configurar Limites", href: "/sistema/alertas/cadastra-limites" },
+      { name: "Configurar Contatos", href: "/sistema/alertas/cadastra-recebimento" },
     ],
   },
 ]
@@ -166,9 +166,8 @@ const NavLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boolean }
     <div className="relative group h-full flex items-center">
       <Link
         href={item.href}
-        className={`flex items-center text-sm font-medium transition-colors duration-300 ${
-          isActive ? theme.activeColor : `${theme.baseColor} ${theme.hoverColor}`
-        }`}
+        className={`flex items-center text-sm font-medium transition-colors duration-300 ${isActive ? theme.activeColor : `${theme.baseColor} ${theme.hoverColor}`
+          }`}
       >
         {item.name}
         {hasSubmenu && (
@@ -184,9 +183,8 @@ const NavLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boolean }
             <Link
               key={subitem.name}
               href={subitem.href}
-              className={`block px-4 py-2 text-sm ${
-                pathname.startsWith(subitem.href) ? theme.activeColor : "text-gray-700"
-              } ${theme.hoverColor} hover:bg-gray-50`}
+              className={`block px-4 py-2 text-sm ${pathname.startsWith(subitem.href) ? theme.activeColor : "text-gray-700"
+                } ${theme.hoverColor} hover:bg-gray-50`}
             >
               {subitem.name}
             </Link>
@@ -227,9 +225,8 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
     return (
       <Link
         href={item.href}
-        className={`w-full flex items-center p-3 rounded-lg transition-colors text-sm ${
-          isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
-        }`}
+        className={`w-full flex items-center p-3 rounded-lg transition-colors text-sm ${isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
+          }`}
       >
         {item.icon && (
           <item.icon
@@ -244,9 +241,8 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
   return (
     <div>
       <div
-        className={`w-full flex items-center rounded-lg transition-colors text-sm ${
-          isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
-        }`}
+        className={`w-full flex items-center rounded-lg transition-colors text-sm ${isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
+          }`}
       >
         <Link href={item.href} className="flex-grow flex items-center p-3 rounded-l-lg">
           {item.icon && (
@@ -262,18 +258,16 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
           aria-label={`Expandir ${item.name}`}
         >
           <ChevronDown
-            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${
-              isParentActive ? theme.iconColor : theme.baseIconColor
-            }`}
+            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isParentActive ? theme.iconColor : theme.baseIconColor
+              }`}
           />{" "}
           {/* AJUSTE: Cor do ícone chevron */}
         </button>
       </div>
 
       <div
-        className={`pl-6 overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? "max-h-[1000px]" : "max-h-0"
-        }`}
+        className={`pl-6 overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[1000px]" : "max-h-0"
+          }`}
       >
         <div className="pt-2 pb-1 space-y-1 border-l border-gray-700 ml-[1.375rem]">
           {" "}
@@ -284,9 +278,8 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
               <Link
                 key={subitem.name}
                 href={subitem.href}
-                className={`block p-2 pl-4 rounded-md text-sm transition-colors ${
-                  isSubActive ? theme.submenuActiveText : `text-gray-400 ${theme.submenuHoverBg}`
-                }`}
+                className={`block p-2 pl-4 rounded-md text-sm transition-colors ${isSubActive ? theme.submenuActiveText : `text-gray-400 ${theme.submenuHoverBg}`
+                  }`}
               >
                 {subitem.name}
               </Link>
@@ -346,9 +339,8 @@ const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
             <Link
               key={item.name}
               href={item.submenu ? item.submenu[0].href : item.href}
-              className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
-                isActive ? "text-cyan-400" : "text-gray-400 hover:text-cyan-300"
-              }`}
+              className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${isActive ? "text-cyan-400" : "text-gray-400 hover:text-cyan-300"
+                }`}
             >
               <item.icon className="w-6 h-6 mb-1" strokeWidth={isActive ? 2.5 : 2} />
               <span className="text-xs font-medium">{item.name}</span>

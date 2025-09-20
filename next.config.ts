@@ -36,11 +36,11 @@ const nextConfig: NextConfig = {
         destination: '/system/client/alerts',
       },
        {
-        source: '/sistema/alertas/cadastra_limites',
+        source: '/sistema/alertas/cadastra-limites',
         destination: '/system/client/alerts/register_thresholds',
       },
        {
-        source: '/sistema/alertas/cadastra_recebimento',
+        source: '/sistema/alertas/cadastra-recebimento',
         destination: '/system/client/alerts/register_receipt',
       },
 
