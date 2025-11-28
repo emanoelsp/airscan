@@ -14,7 +14,6 @@ import {
     RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, ReferenceLine
 } from 'recharts';
 import { Asset } from "@/lib/controllers/networkcontroller";
-import { useAuth } from "@/lib/controllers/authcontroller";
 
 // --- INTERFACES ---
 interface RealTimeDataAI {
