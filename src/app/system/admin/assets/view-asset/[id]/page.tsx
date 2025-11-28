@@ -69,8 +69,7 @@ function ConsumptionStatusDisplay({ status, text, duration }: { status: Consumpt
 function ViewAssetPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { account, loading: authLoading } = useAuth();
-
+  
   // Dados
   const [currentAsset, setCurrentAsset] = useState<Asset | null>(null);
   const [networkAssets, setNetworkAssets] = useState<Asset[]>([]);
