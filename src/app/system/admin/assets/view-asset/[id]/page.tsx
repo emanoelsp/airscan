@@ -100,6 +100,7 @@ function ViewAssetPage() {
   const [leakDuration, setLeakDuration] = useState(0);
   const leakDbIdRef = useRef<string | null>(null);
   const leakStartTimeRef = useRef<number | null>(null);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   // Estatísticas Locais (Mín/Máx do histórico visível)
   const [stats, setStats] = useState({ min: 0, max: 0, current: 0 });
@@ -133,6 +134,7 @@ function ViewAssetPage() {
     setConsumptionStatus('normal'); setLeakStartTime(null); setLeakDuration(0);
     leakDbIdRef.current = null;
     leakStartTimeRef.current = null;
+    setIsOnline(null);
 
     if (!currentAsset?.apiUrl) return;
 
@@ -173,6 +175,7 @@ function ViewAssetPage() {
             duracao_vazamento_min: data.duracao_minutos || 0 
         };
         setRealTimeData(newData);
+        setIsOnline(true);
 
         setHistoryData(prev => {
             const pt = { time: newData.lastUpdate, pressao: newData.pressao, mse: newData.mse, limiar: newData.threshold };
@@ -196,9 +199,17 @@ function ViewAssetPage() {
 
             // Chama Controller
             const result = await leakController.syncLeakEvent({
-                assetId: currentAsset.id, assetName: currentAsset.name, networkId: currentAsset.networkId,
-                currentLpm: newData.lpm_vazamento, currentPressure: newData.pressao, startTime: currentStart,
-                currentDbId: leakDbIdRef.current
+                assetId: currentAsset.id,
+                assetName: currentAsset.name,
+                networkId: currentAsset.networkId,
+                currentLpm: newData.lpm_vazamento,
+                currentPressure: newData.pressao,
+                startTime: currentStart,
+                currentDbId: leakDbIdRef.current,
+                // Contatos configurados para o ativo (e-mail / WhatsApp)
+                contactName: (currentAsset as any).contactName,
+                contactEmails: (currentAsset as any).contactEmails,
+                contactPhones: (currentAsset as any).contactPhones,
             });
 
             if (result.dbId) leakDbIdRef.current = result.dbId;
@@ -223,13 +234,13 @@ function ViewAssetPage() {
             console.warn("Timeout ao buscar dados da API");
           } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
             console.warn("Erro de conexão com a API. Verifique se a API está online e acessível.");
-            // Define status como offline se não conseguir conectar
+            // Define status como "Esperando dados da API" se ainda não houver leituras
             setRealTimeData((prev) => {
               if (prev !== null) return prev;
               return {
                 pressao: 0,
                 is_anomaly: false,
-                status_sistema: "API Offline",
+                status_sistema: "Esperando dados da API",
                 mse: 0,
                 uncertainty: 0,
                 drift: "n/a",
@@ -239,6 +250,9 @@ function ViewAssetPage() {
                 lastUpdate: new Date().toLocaleTimeString()
               };
             });
+            // Para o card de status, mostra "esperando" em vez de "consumo normal"
+            setConsumptionStatus('waiting');
+            setIsOnline(false);
           } else {
             console.error("Erro ao buscar dados:", err.message);
           }
@@ -301,10 +315,24 @@ function ViewAssetPage() {
                             }} 
                                  className={`p-3 rounded-lg cursor-pointer flex justify-between items-center transition-colors ${a.id === currentAsset.id ? 'bg-blue-600/20 border border-blue-500/50' : 'hover:bg-slate-700/50 border border-transparent'}`}>
                                 <div className="flex items-center gap-3">
-                                    <Cpu className={`w-5 h-5 ${a.status==='online'?'text-green-400':'text-slate-500'}`}/>
+                                    <Cpu className={`w-5 h-5 ${
+                                      a.id === currentAsset.id
+                                        ? isOnline
+                                          ? 'text-green-400'
+                                          : 'text-slate-500'
+                                        : 'text-slate-500'
+                                    }`}/>
                                     <span className="text-sm font-medium">{a.name}</span>
                                 </div>
-                                <span className={`w-2 h-2 rounded-full ${a.status==='online'?'bg-green-400':'bg-red-400'}`}/>
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    a.id === currentAsset.id
+                                      ? isOnline
+                                        ? 'bg-green-400'
+                                        : 'bg-red-400'
+                                      : 'bg-red-400'
+                                  }`}
+                                />
                             </div>
                         ))}
                     </div>

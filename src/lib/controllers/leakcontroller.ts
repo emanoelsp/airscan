@@ -1,5 +1,15 @@
 import { db } from "@/lib/firebase/firebaseconfig";
-import { collection, addDoc, Timestamp, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 // Interfaces de Dados
 export interface LeakEventData {
@@ -10,6 +20,10 @@ export interface LeakEventData {
   currentPressure: number;
   startTime: number; // Timestamp JS (Date.now())
   currentDbId: string | null; // ID se já estiver salvo
+  // Contatos configurados no ativo (opcionais)
+  contactName?: string;
+  contactEmails?: string[];
+  contactPhones?: string[];
 }
 
 export interface LeakResult {
@@ -66,6 +80,12 @@ const leakController = {
           lastUpdate: Timestamp.now()
         });
 
+        // Agenda envio de alertas (e-mail / WhatsApp) se houver contatos configurados
+        await leakController.enqueueAlertsIfNeeded({
+          ...data,
+          severity,
+        });
+
         return { dbId: docRef.id, action: 'created', severity };
       } 
       
@@ -80,6 +100,12 @@ const leakController = {
             custo_hora: custoHora,
             lastUpdate: Timestamp.now()
         });
+        // Opcional: se a severidade piorou, também podemos enfileirar alertas adicionais
+        await leakController.enqueueAlertsIfNeeded({
+          ...data,
+          severity,
+        });
+
         return { dbId: data.currentDbId, action: 'updated', severity };
       }
 
@@ -102,7 +128,47 @@ const leakController = {
     } catch (error) {
         console.error("Erro ao resolver vazamento:", error);
     }
-  }
+  },
+
+  /**
+   * Enfileira alertas para processamento assíncrono (Cloud Functions / backend externo).
+   * Aqui NÃO enviamos e-mail / WhatsApp diretamente; apenas gravamos em uma coleção
+   * que pode ser monitorada por um worker.
+   */
+  async enqueueAlertsIfNeeded(
+    data: LeakEventData & { severity: LeakResult["severity"] }
+  ) {
+    // Só envia alerta para severidade real de vazamento
+    if (data.severity === "normal") return;
+
+    const hasEmails = Array.isArray(data.contactEmails) && data.contactEmails.length > 0;
+    const hasPhones = Array.isArray(data.contactPhones) && data.contactPhones.length > 0;
+    if (!hasEmails && !hasPhones) return;
+
+    try {
+      await addDoc(collection(db, "airscan_alerts_queue"), {
+        assetId: data.assetId,
+        assetName: data.assetName,
+        networkId: data.networkId,
+        severity: data.severity,
+        lpm: data.currentLpm,
+        pressure: data.currentPressure,
+        startTime: Timestamp.fromMillis(data.startTime),
+        contactGroupName: data.contactName || null,
+        emails: hasEmails ? data.contactEmails : [],
+        phones: hasPhones ? data.contactPhones : [],
+        channels: {
+          email: hasEmails,
+          whatsapp: hasPhones,
+        },
+        status: "pending", // Worker externo deve processar e marcar como "sent"/"failed"
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Erro ao enfileirar alertas de vazamento:", error);
+      // Não propaga erro para não quebrar a UI nem o registro do vazamento
+    }
+  },
 };
 
 export default leakController;

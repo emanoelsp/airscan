@@ -119,6 +119,7 @@ export default function ClientTopologyPage() {
   // NOVO: Estados para a lógica de anomalia
   const [consumptionStatus, setConsumptionStatus] = useState<ConsumptionStatus>('normal');
   const [anomalyStartTime, setAnomalyStartTime] = useState<number | null>(null);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   // Efeito para carregar os dados da rede do cliente (sem alterações)
   useEffect(() => {
@@ -160,6 +161,7 @@ export default function ClientTopologyPage() {
     setRealTimeData(null);
     setConsumptionStatus('normal');
     setAnomalyStartTime(null);
+    setIsOnline(null);
 
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
@@ -183,6 +185,7 @@ export default function ClientTopologyPage() {
               is_anomaly: data.is_anomaly,
               lastUpdate: new Date().toLocaleTimeString('pt-BR'),
             });
+            setIsOnline(true);
 
             // NOVO: Lógica para definir o status do consumo
             if (data.is_anomaly) {
@@ -208,6 +211,7 @@ export default function ClientTopologyPage() {
         }
       } catch (error) {
         console.error("Erro ao buscar dados da API:", error);
+        setIsOnline(false);
       }
     };
 
@@ -275,12 +279,12 @@ export default function ClientTopologyPage() {
                             <p className="text-sm text-slate-400 capitalize">{selectedAsset.type} - {selectedAsset.model || 'N/A'}</p>
                         </div>
                         <div className={`p-3 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                            selectedAsset.status === 'online' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                            isOnline ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                         }`}>
                             <div className={`w-3 h-3 rounded-full ${
-                                selectedAsset.status === 'online' ? 'bg-green-400' : 'bg-red-400'
+                                isOnline ? 'bg-green-400' : 'bg-red-400'
                             }`}></div>
-                            Status: {selectedAsset.status.charAt(0).toUpperCase() + selectedAsset.status.slice(1)}
+                            Status: {isOnline ? 'Online' : 'Offline'}
                         </div>
 
                         {selectedAsset.type === 'compressor' && (

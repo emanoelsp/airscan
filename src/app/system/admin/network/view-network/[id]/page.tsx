@@ -177,6 +177,15 @@ export default function ViewNetworkPage() {
               lastUpdate: new Date().toLocaleTimeString('pt-BR'),
             });
 
+            // Marca o ativo como online na topologia e no painel
+            setSelectedAsset(prev => prev ? { ...prev, status: 'online' } : prev);
+            setNetwork(prev => prev ? ({
+              ...prev,
+              assets: prev.assets.map(a =>
+                a.id === selectedAsset.id ? { ...a, status: 'online' } : a
+              ),
+            }) : prev);
+
             // NOVO: Lógica para definir o status do consumo
             if (data.is_anomaly) {
               const now = Date.now();
@@ -203,7 +212,18 @@ export default function ViewNetworkPage() {
         }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
-        setRealTimeData(prev => ({ ...(prev || { pressao: 0, is_anomaly: false, mse: 0, threshold: 0 }), lastUpdate: "Falha" })); 
+        // Marca o ativo como offline / aguardando dados da API
+        setSelectedAsset(prev => prev ? { ...prev, status: 'offline' } : prev);
+        setNetwork(prev => prev ? ({
+          ...prev,
+          assets: prev.assets.map(a =>
+            a.id === selectedAsset.id ? { ...a, status: 'offline' } : a
+          ),
+        }) : prev);
+        setRealTimeData(prev => ({
+          ...(prev || { pressao: 0, is_anomaly: false, mse: 0, threshold: 0 }),
+          lastUpdate: "Aguardando dados da API",
+        })); 
       }
     };
 
@@ -211,6 +231,73 @@ export default function ViewNetworkPage() {
     const interval = setInterval(fetchRealTimeData, 5000); // Busca a cada 5 segundos
     return () => clearInterval(interval);
   }, [selectedAsset, anomalyStartTime]); // Adiciona anomalyStartTime como dependência
+
+  /**
+   * Monitoramento leve de todos os ativos com API na rede para exibir status online/offline
+   * na visão de topologia, independente do ativo selecionado.
+   */
+  useEffect(() => {
+    if (!network) return;
+
+    const assetsWithApi = network.assets.filter(
+      (asset) => asset.type === "compressor" && asset.apiUrl
+    );
+
+    if (assetsWithApi.length === 0) return;
+
+    let isCancelled = false;
+
+    const updateAssetsStatus = async () => {
+      await Promise.all(
+        assetsWithApi.map(async (asset) => {
+          const apiUrl = (asset.apiUrl || "").trim();
+          if (!apiUrl) return;
+
+          return fetch(apiUrl, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`API retornou ${response.status}`);
+              }
+
+              if (isCancelled) return;
+              // Resposta OK -> ativo online
+              setNetwork((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      assets: prev.assets.map((a) =>
+                        a.id === asset.id ? { ...a, status: "online" } : a
+                      ),
+                    }
+                  : prev
+              );
+            })
+            .catch(() => {
+              if (isCancelled) return;
+              // Erro de fetch -> considera offline / aguardando dados da API
+              setNetwork((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      assets: prev.assets.map((a) =>
+                        a.id === asset.id ? { ...a, status: "offline" } : a
+                      ),
+                    }
+                  : prev
+              );
+            });
+        })
+      );
+    };
+
+    // Atualiza imediatamente (somente na carga / mudança da rede)
+    updateAssetsStatus();
+    return () => {
+      isCancelled = true;
+    };
+  }, [network]);
 
   if (authLoading || loading) {
     return (
@@ -236,6 +323,10 @@ export default function ViewNetworkPage() {
   // AJUSTE: usa 'pressao' ao invés de 'pressure'
   const gaugeData = [{ name: 'Pressure', value: realTimeData?.pressao || 0, fill: '#3b82f6' }];
 
+  // Contadores de equipamentos online/offline baseados no status já ajustado pela API
+  const onlineCount = network.assets.filter((a) => a.status === "online").length;
+  const offlineCount = network.assets.length - onlineCount;
+
   return (
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60rem] h-[60rem] bg-blue-600/20 rounded-full blur-3xl -z-0" aria-hidden="true" />
@@ -247,6 +338,16 @@ export default function ViewNetworkPage() {
                 </Link>
                 <h1 className="text-3xl font-bold text-slate-100">{network.name}</h1>
                 <p className="text-slate-300">{network.clientCompanyName} - {network.clientContactName}</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 text-sm text-green-300">
+                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                    {onlineCount} online
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-red-500/10 px-3 py-1 text-sm text-red-300">
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    {offlineCount} offline
+                  </span>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
