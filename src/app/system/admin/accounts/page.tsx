@@ -241,6 +241,9 @@ export default function UserAccountsPage() {
   const [editingClient, setEditingClient] = useState<Account | null>(null);
   const [clients, setClients] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"active" | "inactive" | "admin">(
+    "active"
+  );
 
   const refreshClients = async () => {
     try {
@@ -371,6 +374,124 @@ export default function UserAccountsPage() {
     );
   }
 
+  const activeClients = clients.filter(
+    (account) => account.role === "cliente" && account.status === "active"
+  );
+  const inactiveClients = clients.filter(
+    (account) => account.role === "cliente" && account.status === "inactive"
+  );
+  const adminUsers = clients.filter((account) => account.role === "admin");
+
+  const StatusBadge = ({ account }: { account: Account }) => (
+    <p
+      className={`rounded-md whitespace-nowrap mt-0.5 px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+        account.status === "active"
+          ? "text-green-400 bg-green-400/10 ring-green-400/30"
+          : "text-slate-400 bg-slate-400/10 ring-slate-400/30"
+      }`}
+    >
+      {account.status === "active" ? "Ativo" : "Inativo"}
+    </p>
+  );
+
+  const RoleBadge = ({ account }: { account: Account }) => (
+    <p
+      className={`rounded-md whitespace-nowrap mt-0.5 px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+        account.role === "admin"
+          ? "text-yellow-400 bg-yellow-400/10 ring-yellow-400/30"
+          : "text-blue-300 bg-blue-400/10 ring-blue-300/30"
+      }`}
+    >
+      {account.role === "admin" ? "Admin" : "Cliente"}
+    </p>
+  );
+
+  const AccountsList = ({
+    accounts,
+    showRole,
+  }: {
+    accounts: Account[];
+    showRole?: boolean;
+  }) => (
+    <ul role="list" className="divide-y divide-white/10">
+      {accounts.map((account) => (
+        <li
+          key={account.id}
+          className="flex items-center justify-between gap-x-6 p-6 hover:bg-slate-800/50 transition-colors"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-x-3">
+              <p className="text-base font-semibold leading-6 text-white">
+                {account.companyName}
+              </p>
+              {showRole ? <RoleBadge account={account} /> : null}
+              <StatusBadge account={account} />
+            </div>
+            <div className="mt-1 flex items-center gap-x-2 text-sm leading-5 text-slate-400">
+              <User className="h-4 w-4 flex-shrink-0" />
+              <p className="truncate">{account.contactName}</p>
+            </div>
+            <div className="mt-1 flex items-center gap-x-2 text-sm leading-5 text-slate-400">
+              <Mail className="h-4 w-4 flex-shrink-0" />
+              <p className="truncate">{account.email}</p>
+            </div>
+          </div>
+          <div className="flex flex-none items-center gap-x-4">
+            <button
+              onClick={() => handleEditClick(account)}
+              className="rounded-full p-2.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            >
+              <Pencil className="h-5 w-5" />
+              <span className="sr-only">Editar</span>
+            </button>
+            <button
+              onClick={() => handleDeleteClick(account)}
+              className="rounded-full p-2.5 text-red-400 hover:text-white hover:bg-red-500/50 transition-colors"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span className="sr-only">Excluir</span>
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const AccountsSection = ({
+    title,
+    subtitle,
+    accounts,
+    emptyText,
+    showRole,
+  }: {
+    title: string;
+    subtitle?: string;
+    accounts: Account[];
+    emptyText: string;
+    showRole?: boolean;
+  }) => (
+    <section className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+      <div className="px-6 py-5 border-b border-white/10">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-white truncate">{title}</h2>
+            {subtitle ? (
+              <p className="mt-1 text-sm text-slate-300">{subtitle}</p>
+            ) : null}
+          </div>
+          <p className="text-sm text-slate-300 whitespace-nowrap">
+            {accounts.length}
+          </p>
+        </div>
+      </div>
+      {accounts.length === 0 ? (
+        <div className="p-6 text-sm text-slate-400">{emptyText}</div>
+      ) : (
+        <AccountsList accounts={accounts} showRole={showRole} />
+      )}
+    </section>
+  );
+
   return (
     <main className="relative min-h-screen bg-slate-900 text-white px-4 py-16 sm:px-6 lg:px-8 overflow-hidden">
       <div
@@ -389,6 +510,84 @@ export default function UserAccountsPage() {
                 <p className="mt-2 text-lg text-slate-300">
                   Adicione, edite ou pesquise por clientes no sistema.
                 </p>
+                <p className="mt-2 text-sm text-slate-400">
+                  {activeClients.length} ativos • {inactiveClients.length} inativos •{" "}
+                  {adminUsers.length} admins
+                </p>
+                <div className="mt-4">
+                  <div
+                    role="tablist"
+                    aria-label="Filtrar clientes"
+                    className="inline-flex flex-wrap gap-1 rounded-xl border border-white/10 bg-slate-800/40 p-1"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === "active"}
+                      onClick={() => setActiveTab("active")}
+                      className={`inline-flex items-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500 ${
+                        activeTab === "active"
+                          ? "bg-slate-700/60 text-white"
+                          : "text-slate-300 hover:bg-slate-800/60"
+                      }`}
+                    >
+                      Ativos
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-bold ring-1 ring-inset ${
+                          activeTab === "active"
+                            ? "text-green-300 bg-green-400/10 ring-green-400/30"
+                            : "text-slate-300 bg-slate-700/40 ring-white/10"
+                        }`}
+                      >
+                        {activeClients.length}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === "inactive"}
+                      onClick={() => setActiveTab("inactive")}
+                      className={`inline-flex items-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500 ${
+                        activeTab === "inactive"
+                          ? "bg-slate-700/60 text-white"
+                          : "text-slate-300 hover:bg-slate-800/60"
+                      }`}
+                    >
+                      Inativos
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-bold ring-1 ring-inset ${
+                          activeTab === "inactive"
+                            ? "text-slate-200 bg-slate-400/10 ring-slate-400/30"
+                            : "text-slate-300 bg-slate-700/40 ring-white/10"
+                        }`}
+                      >
+                        {inactiveClients.length}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === "admin"}
+                      onClick={() => setActiveTab("admin")}
+                      className={`inline-flex items-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-500 ${
+                        activeTab === "admin"
+                          ? "bg-slate-700/60 text-white"
+                          : "text-slate-300 hover:bg-slate-800/60"
+                      }`}
+                    >
+                      Admins
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-bold ring-1 ring-inset ${
+                          activeTab === "admin"
+                            ? "text-yellow-300 bg-yellow-400/10 ring-yellow-400/30"
+                            : "text-slate-300 bg-slate-700/40 ring-white/10"
+                        }`}
+                      >
+                        {adminUsers.length}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="mt-6 flex space-x-3 md:mt-0 md-ml-4">
                 <button
@@ -409,43 +608,29 @@ export default function UserAccountsPage() {
               </div>
             </div>
 
-            <div className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
-              <ul role="list" className="divide-y divide-white/10">
-                {clients.map((client) => (
-                  <li key={client.id} className="flex items-center justify-between gap-x-6 p-6 hover:bg-slate-800/50 transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-x-3">
-                        <p className="text-base font-semibold leading-6 text-white">{client.companyName}</p>
-                        <p className={`rounded-md whitespace-nowrap mt-0.5 px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                            client.role === 'admin' ? 'text-yellow-400 bg-yellow-400/10 ring-yellow-400/30'
-                            : client.status === 'active' ? 'text-green-400 bg-green-400/10 ring-green-400/30'
-                            : 'text-slate-400 bg-slate-400/10 ring-slate-400/30'
-                          }`}>
-                          {client.role === 'admin' ? 'Admin' : client.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </p>
-                      </div>
-                      <div className="mt-1 flex items-center gap-x-2 text-sm leading-5 text-slate-400">
-                        <User className="h-4 w-4 flex-shrink-0" />
-                        <p className="truncate">{client.contactName}</p>
-                      </div>
-                      <div className="mt-1 flex items-center gap-x-2 text-sm leading-5 text-slate-400">
-                        <Mail className="h-4 w-4 flex-shrink-0" />
-                        <p className="truncate">{client.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-none items-center gap-x-4">
-                      <button onClick={() => handleEditClick(client)} className="rounded-full p-2.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
-                        <Pencil className="h-5 w-5" />
-                        <span className="sr-only">Editar</span>
-                      </button>
-                      <button onClick={() => handleDeleteClick(client)} className="rounded-full p-2.5 text-red-400 hover:text-white hover:bg-red-500/50 transition-colors">
-                        <Trash2 className="h-5 w-5" />
-                        <span className="sr-only">Excluir</span>
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <div>
+              {activeTab === "active" ? (
+                <AccountsSection
+                  title="Clientes ativos"
+                  subtitle="Clientes com acesso liberado ao sistema."
+                  accounts={activeClients}
+                  emptyText="Nenhum cliente ativo encontrado."
+                />
+              ) : activeTab === "inactive" ? (
+                <AccountsSection
+                  title="Clientes inativos"
+                  subtitle="Clientes desativados (acesso bloqueado)."
+                  accounts={inactiveClients}
+                  emptyText="Nenhum cliente inativo encontrado."
+                />
+              ) : (
+                <AccountsSection
+                  title="Usuários admin"
+                  subtitle="Usuários com permissão de administração."
+                  accounts={adminUsers}
+                  emptyText="Nenhum usuário admin encontrado."
+                />
+              )}
             </div>
           </>
         ) : (
