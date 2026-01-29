@@ -235,10 +235,16 @@ export default function ViewNetworkPage() {
   /**
    * Monitoramento leve de todos os ativos com API na rede para exibir status online/offline
    * na visão de topologia, independente do ativo selecionado.
+   *
+   * Correções:
+   * - A dependência é apenas o ID da rede (`network?.id`) para evitar loop com `setNetwork`.
+   * - Mantém um `setInterval` para monitoramento contínuo, mas usa uma lista fixa de assets
+   *   (os da rede atual) para não depender de mudanças em `network` a cada atualização de status.
    */
   useEffect(() => {
     if (!network) return;
 
+    // Snapshot dos ativos com API da rede atual
     const assetsWithApi = network.assets.filter(
       (asset) => asset.type === "compressor" && asset.apiUrl
     );
@@ -264,7 +270,7 @@ export default function ViewNetworkPage() {
               if (isCancelled) return;
               // Resposta OK -> ativo online
               setNetwork((prev) =>
-                prev
+                prev && prev.id === network.id
                   ? {
                       ...prev,
                       assets: prev.assets.map((a) =>
@@ -278,7 +284,7 @@ export default function ViewNetworkPage() {
               if (isCancelled) return;
               // Erro de fetch -> considera offline / aguardando dados da API
               setNetwork((prev) =>
-                prev
+                prev && prev.id === network.id
                   ? {
                       ...prev,
                       assets: prev.assets.map((a) =>
@@ -292,12 +298,15 @@ export default function ViewNetworkPage() {
       );
     };
 
-    // Atualiza imediatamente (somente na carga / mudança da rede)
+    // Checa imediatamente e, depois, em intervalos (monitoramento leve)
     updateAssetsStatus();
+    const intervalId = setInterval(updateAssetsStatus, 10000); // 10s
+
     return () => {
       isCancelled = true;
+      clearInterval(intervalId);
     };
-  }, [network]);
+  }, [network?.id]);
 
   if (authLoading || loading) {
     return (
