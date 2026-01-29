@@ -306,6 +306,8 @@ export default function ViewNetworkPage() {
       isCancelled = true;
       clearInterval(intervalId);
     };
+    // Dependência intencional: só network?.id para evitar loop; network.assets não deve re-disparar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [network?.id]);
 
   if (authLoading || loading) {

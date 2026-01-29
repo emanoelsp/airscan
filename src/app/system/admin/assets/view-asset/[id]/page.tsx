@@ -13,9 +13,16 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, ReferenceLine
 } from 'recharts';
-import { Asset } from "@/lib/controllers/networkcontroller";
+import type { Asset as BaseAsset } from "@/lib/controllers/networkcontroller";
 
 // --- INTERFACES ---
+
+// Estende o Asset da rede com campos de contatos usados para alertas
+interface Asset extends BaseAsset {
+  contactName?: string;
+  contactEmails?: string[];
+  contactPhones?: string[];
+}
 
 interface NetworkInfo {
   id: string;
@@ -207,9 +214,9 @@ function ViewAssetPage() {
                 startTime: currentStart,
                 currentDbId: leakDbIdRef.current,
                 // Contatos configurados para o ativo (e-mail / WhatsApp)
-                contactName: (currentAsset as any).contactName,
-                contactEmails: (currentAsset as any).contactEmails,
-                contactPhones: (currentAsset as any).contactPhones,
+                contactName: currentAsset.contactName,
+                contactEmails: currentAsset.contactEmails,
+                contactPhones: currentAsset.contactPhones,
             });
 
             if (result.dbId) leakDbIdRef.current = result.dbId;
