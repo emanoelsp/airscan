@@ -10,6 +10,26 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
+async function isApiOnline(apiUrl: string, timeoutMs = 5000): Promise<boolean> {
+  const url = apiUrl.trim();
+  if (!url) return false;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      headers: { "ngrok-skip-browser-warning": "true" },
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export interface Asset {
   id: string;
   networkId: string;
@@ -120,9 +140,23 @@ const networkController = {
     const accountsMap = new Map(accountsSnapshot.docs.map(doc => [doc.id, doc.data()]));
     const networks = networksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Network[];
 
+    // Para exibir online/offline corretamente, validamos via API (quando existir apiUrl)
+    const assetsWithApi = assets.filter(
+      (a) => typeof a.apiUrl === "string" && a.apiUrl.trim().length > 0
+    );
+    const onlineAssetIds = new Set<string>();
+    await Promise.all(
+      assetsWithApi.map(async (asset) => {
+        const ok = await isApiOnline(asset.apiUrl as string);
+        if (ok) onlineAssetIds.add(asset.id);
+      })
+    );
+
     const summaries: NetworkSummary[] = networks.map(network => {
       const networkAssets = assets.filter(asset => asset.networkId === network.id);
-      const activeAssets = networkAssets.filter(a => a.status === 'online').length;
+      const activeAssets = networkAssets.filter((a) =>
+        a.apiUrl ? onlineAssetIds.has(a.id) : a.status === "online"
+      ).length;
       const clientAccount = accountsMap.get(network.clientId);
 
       return {

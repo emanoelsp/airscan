@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/controllers/authcontroller";
@@ -27,7 +27,7 @@ type AssetWithPressure = Asset & {
 };
 
 // NOVO: Tipo para o status do consumo
-type ConsumptionStatus = 'normal' | 'anomaly' | 'risk';
+type ConsumptionStatus = 'normal' | 'anomaly' | 'risk' | 'offline';
 
 
 // --- COMPONENTES ---
@@ -85,8 +85,14 @@ function ConsumptionStatusDisplay({ status }: { status: ConsumptionStatus }) {
     risk: {
       text: "Alerta: Risco operacional detectado",
       icon: Siren,
-      colorClasses: "bg-red-500/10 text-red-400 animate-pulse",
+      colorClasses: "bg-red-500/10 text-red-400",
       iconColor: "text-red-400",
+    },
+    offline: {
+      text: "Sem resposta da API",
+      icon: Loader2,
+      colorClasses: "bg-slate-500/10 text-slate-300",
+      iconColor: "text-slate-300",
     },
   };
 
@@ -119,7 +125,7 @@ export default function ViewNetworkPage() {
 
   // NOVO: Estados para controlar a lógica de anomalia
   const [consumptionStatus, setConsumptionStatus] = useState<ConsumptionStatus>('normal');
-  const [anomalyStartTime, setAnomalyStartTime] = useState<number | null>(null);
+  const anomalyStartTimeRef = useRef<number | null>(null);
 
 
   useEffect(() => {
@@ -151,7 +157,7 @@ export default function ViewNetworkPage() {
     // AJUSTE: Resetar todos os estados ao trocar de ativo
     setRealTimeData(null);
     setConsumptionStatus('normal');
-    setAnomalyStartTime(null);
+    anomalyStartTimeRef.current = null;
 
     if (!selectedAsset || selectedAsset.type !== 'compressor' || !selectedAsset.apiUrl) {
         return;
@@ -178,7 +184,11 @@ export default function ViewNetworkPage() {
             });
 
             // Marca o ativo como online na topologia e no painel
-            setSelectedAsset(prev => prev ? { ...prev, status: 'online' } : prev);
+            setSelectedAsset((prev) =>
+              prev && prev.id === selectedAsset.id && prev.status !== "online"
+                ? { ...prev, status: "online" }
+                : prev
+            );
             setNetwork(prev => prev ? ({
               ...prev,
               assets: prev.assets.map(a =>
@@ -190,9 +200,9 @@ export default function ViewNetworkPage() {
             if (data.is_anomaly) {
               const now = Date.now();
               // Se é a primeira vez que a anomalia é detectada, marca o tempo
-              const startTime = anomalyStartTime ?? now;
-              if (!anomalyStartTime) {
-                setAnomalyStartTime(startTime);
+              const startTime = anomalyStartTimeRef.current ?? now;
+              if (!anomalyStartTimeRef.current) {
+                anomalyStartTimeRef.current = startTime;
               }
               // Verifica se a anomalia persiste por mais de 2 minutos (120000 ms)
               if (now - startTime >= 120000) {
@@ -203,7 +213,7 @@ export default function ViewNetworkPage() {
             } else {
               // Se não há anomalia, reseta o status e o timer
               setConsumptionStatus('normal');
-              setAnomalyStartTime(null);
+              anomalyStartTimeRef.current = null;
             }
 
         } else {
@@ -213,16 +223,21 @@ export default function ViewNetworkPage() {
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
         // Marca o ativo como offline / aguardando dados da API
-        setSelectedAsset(prev => prev ? { ...prev, status: 'offline' } : prev);
+        setSelectedAsset((prev) =>
+          prev && prev.id === selectedAsset.id && prev.status !== "offline"
+            ? { ...prev, status: "offline" }
+            : prev
+        );
         setNetwork(prev => prev ? ({
           ...prev,
           assets: prev.assets.map(a =>
             a.id === selectedAsset.id ? { ...a, status: 'offline' } : a
           ),
         }) : prev);
+        setConsumptionStatus('offline');
         setRealTimeData(prev => ({
           ...(prev || { pressao: 0, is_anomaly: false, mse: 0, threshold: 0 }),
-          lastUpdate: "Aguardando dados da API",
+          lastUpdate: "Sem resposta da API",
         })); 
       }
     };
@@ -230,7 +245,7 @@ export default function ViewNetworkPage() {
     fetchRealTimeData();
     const interval = setInterval(fetchRealTimeData, 5000); // Busca a cada 5 segundos
     return () => clearInterval(interval);
-  }, [selectedAsset, anomalyStartTime]); // Adiciona anomalyStartTime como dependência
+  }, [selectedAsset]);
 
   /**
    * Monitoramento leve de todos os ativos com API na rede para exibir status online/offline
@@ -395,9 +410,8 @@ export default function ViewNetworkPage() {
                         {selectedAsset.type === 'compressor' && (
                         <div className="pt-4 border-t border-white/10">
                             <h4 className="font-semibold text-slate-200 mb-3">Dados em Tempo Real</h4>
-                            {realTimeData ? (
                             <div className="space-y-3">
-                                {/* NOVO: Componente de status de consumo */}
+                                {/* Status do Consumo (fixo, sem piscar) */}
                                 <ConsumptionStatusDisplay status={consumptionStatus} />
                                 
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
@@ -405,32 +419,32 @@ export default function ViewNetworkPage() {
                                         <Gauge className="w-5 h-5 text-blue-400"/>
                                         <span>Pressão Atual</span>
                                     </div>
-                                    {/* AJUSTE: usa 'pressao' */}
-                                    <p className="font-bold text-lg text-blue-400">{realTimeData.pressao.toFixed(2)} <span className="text-sm font-normal text-slate-400">bar</span></p>
+                                    <p className="font-bold text-lg text-blue-400">
+                                      {(realTimeData?.pressao ?? 0).toFixed(2)}{" "}
+                                      <span className="text-sm font-normal text-slate-400">bar</span>
+                                    </p>
                                 </div>
                                 <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
                                     <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
                                         <Clock className="w-5 h-5 text-slate-400"/>
                                         <span>Última Atualização</span>
                                     </div>
-                                    <p className="font-semibold text-slate-200">{realTimeData.lastUpdate}</p>
+                                    <p className="font-semibold text-slate-200">{realTimeData?.lastUpdate || "—"}</p>
                                 </div>
-                                {/* GAUGE */}
+                                {/* GAUGE (fixo) */}
                                 <div className="pt-4 border-t border-white/10">
                                     <ResponsiveContainer width="100%" height={200}>
                                         <RadialBarChart innerRadius="70%" outerRadius="100%" data={gaugeData} startAngle={180} endAngle={0} barSize={25}>
                                             <PolarAngleAxis type="number" domain={[0, (selectedAsset as AssetWithPressure)?.maxPressure || 10]} angleAxisId={0} tick={false} />
-                                            <RadialBar background dataKey="value" angleAxisId={0} />
-                                            {/* AJUSTE: usa 'pressao' */}
-                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">{realTimeData.pressao.toFixed(2)}</text>
+                                            <RadialBar background dataKey="value" angleAxisId={0} isAnimationActive={false} />
+                                            <text x="50%" y="55%" textAnchor="middle" dominantBaseline="middle" className="fill-white text-3xl font-bold">
+                                              {(realTimeData?.pressao ?? 0).toFixed(2)}
+                                            </text>
                                             <text x="50%" y="70%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-sm">bar</text>
                                         </RadialBarChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                            ) : (
-                                <p className="text-sm text-slate-400 text-center py-4">Aguardando dados da API...</p>
-                            )}
                         </div>
                         )}
                     </div>
