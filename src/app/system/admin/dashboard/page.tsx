@@ -28,15 +28,16 @@ function StatCard({ icon: Icon, title, value, color, href }: { icon: ElementType
         green: "text-green-400",
         purple: "text-purple-400",
         slate: "text-slate-400",
+        orange: "text-orange-400",
     };
 
     const CardContent = () => (
-        <div className="flex flex-col justify-between h-full">
+        <div className="flex flex-col justify-between h-full min-h-[120px]">
             <div className="flex justify-between items-start">
                 <p className="text-sm font-medium text-slate-400">{title}</p>
                 <Icon className={`w-6 h-6 ${colorClasses[color]}`} />
             </div>
-            <div>
+            <div className="mt-4">
                 <p className="text-3xl font-bold text-slate-100">{value}</p>
             </div>
         </div>

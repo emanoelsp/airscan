@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
 import { AuthProvider } from "@/lib/controllers/authcontroller";
+import { ConditionalFooter } from "@/components/conditional-footer";
 
 export const metadata: Metadata = {
   title: "AIRScan",
@@ -19,7 +19,7 @@ export default function RootLayout({
       <body className="bg-gray-50">
         <AuthProvider>
           <Header>{children}</Header>
-          <Footer />
+          <ConditionalFooter />
         </AuthProvider>
       </body>
     </html>

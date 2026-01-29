@@ -53,7 +53,7 @@ function DashboardCard({
       </div>
       
       {/* Botão de Ação */}
-      <div className="mt-6">
+      <div className="mt-6 pt-4 border-t border-white/10">
         <a
           href={buttonHref}
           className={`inline-flex items-center gap-x-2 font-semibold text-sm ${colorClass} hover:brightness-125 transition-all`}

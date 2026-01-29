@@ -45,9 +45,9 @@ export default function LoginPage() {
       const account = await authController.signIn(email, password);
       
       if (account.role === 'admin') {
-        router.push("/system/admin/dashboard");
+        router.push("/administracao");
       } else {
-        router.push("/system/client/dashboard");
+        router.push("/painel");
       }
     } catch (err: unknown) { // CORREÇÃO: Trocado 'any' por 'unknown'
       // Verifica se o erro é uma instância de Error para acessar a mensagem com segurança

@@ -88,7 +88,7 @@ export default function ManageAssetsPage() {
 
   const handleViewAsset = (asset: Asset) => {
     const assetQuery = encodeURIComponent(JSON.stringify(asset));
-    router.push(`/system/admin/assets/view-asset/${asset.id}?data=${assetQuery}`);
+    router.push(`/administracao/equipamentos/visualizar/${asset.id}?data=${assetQuery}`);
   };
 
   const handleDeleteAsset = async (asset: Asset) => {

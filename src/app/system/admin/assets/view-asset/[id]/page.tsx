@@ -99,6 +99,7 @@ function ViewAssetPage() {
   const [leakStartTime, setLeakStartTime] = useState<number | null>(null);
   const [leakDuration, setLeakDuration] = useState(0);
   const leakDbIdRef = useRef<string | null>(null);
+  const leakStartTimeRef = useRef<number | null>(null);
 
   // Estatísticas Locais (Mín/Máx do histórico visível)
   const [stats, setStats] = useState({ min: 0, max: 0, current: 0 });
@@ -131,12 +132,31 @@ function ViewAssetPage() {
     setHistoryData([]); setRealTimeData(null);
     setConsumptionStatus('normal'); setLeakStartTime(null); setLeakDuration(0);
     leakDbIdRef.current = null;
+    leakStartTimeRef.current = null;
 
     if (!currentAsset?.apiUrl) return;
 
     const fetchRealTimeData = async () => {
       try {
-        const response = await fetch(currentAsset.apiUrl ?? "", { headers: { 'ngrok-skip-browser-warning': 'true' } });        if (!response.ok) throw new Error("API Error");
+        if (!currentAsset.apiUrl || currentAsset.apiUrl.trim() === "") {
+          console.warn("API URL não configurada para este ativo");
+          return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+
+        const response = await fetch(currentAsset.apiUrl, { 
+          headers: { 'ngrok-skip-browser-warning': 'true' },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         const newData: RealTimeDataAI = {
@@ -164,8 +184,13 @@ function ViewAssetPage() {
             setConsumptionStatus('waiting');
         } else if (newData.is_anomaly) {
             const now = Date.now();
-            if (!leakStartTime) setLeakStartTime(now);
-            const currentStart = leakStartTime || now;
+            const currentStart = leakStartTimeRef.current ?? now;
+
+            if (!leakStartTimeRef.current) {
+              leakStartTimeRef.current = now;
+              setLeakStartTime(now);
+            }
+
             const durationMin = (now - currentStart) / 60000;
             setLeakDuration(durationMin);
 
@@ -187,9 +212,40 @@ function ViewAssetPage() {
                 leakDbIdRef.current = null;
                 showSuccess("Sistema normalizado.");
             }
-            setConsumptionStatus('normal'); setLeakStartTime(null); setLeakDuration(0);
+            setConsumptionStatus('normal');
+            setLeakStartTime(null);
+            setLeakDuration(0);
+            leakStartTimeRef.current = null;
         }
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.name === 'AbortError') {
+            console.warn("Timeout ao buscar dados da API");
+          } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+            console.warn("Erro de conexão com a API. Verifique se a API está online e acessível.");
+            // Define status como offline se não conseguir conectar
+            setRealTimeData((prev) => {
+              if (prev !== null) return prev;
+              return {
+                pressao: 0,
+                is_anomaly: false,
+                status_sistema: "API Offline",
+                mse: 0,
+                uncertainty: 0,
+                drift: "n/a",
+                lpm_vazamento: 0,
+                gap: 0,
+                threshold: 0,
+                lastUpdate: new Date().toLocaleTimeString()
+              };
+            });
+          } else {
+            console.error("Erro ao buscar dados:", err.message);
+          }
+        } else {
+          console.error("Erro desconhecido:", err);
+        }
+      }
     };
     fetchRealTimeData();
     const interval = setInterval(fetchRealTimeData, 5000);
@@ -239,7 +295,10 @@ function ViewAssetPage() {
                     <h3 className="text-lg font-semibold mb-4 text-slate-200">Rede: {networkInfo?.name}</h3>
                     <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
                         {networkAssets.map(a => (
-                            <div key={a.id} onClick={() => setCurrentAsset(a)} 
+                            <div key={a.id} onClick={() => {
+                                const assetQuery = encodeURIComponent(JSON.stringify(a));
+                                router.push(`/administracao/equipamentos/visualizar/${a.id}?data=${assetQuery}`);
+                            }} 
                                  className={`p-3 rounded-lg cursor-pointer flex justify-between items-center transition-colors ${a.id === currentAsset.id ? 'bg-blue-600/20 border border-blue-500/50' : 'hover:bg-slate-700/50 border border-transparent'}`}>
                                 <div className="flex items-center gap-3">
                                     <Cpu className={`w-5 h-5 ${a.status==='online'?'text-green-400':'text-slate-500'}`}/>

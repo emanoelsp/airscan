@@ -16,6 +16,10 @@ import {
   Users,
   Ticket,
   Activity,
+  Shield,
+  User,
+  LogOut,
+  UserCog,
 } from "lucide-react"
 
 // --- Type Definitions ---
@@ -72,91 +76,89 @@ const mainNav: NavItem[] = [
 ]
 
 const clientNav: NavItem[] = [
-  { name: "Dashboard", href: "/system/client/dashboard", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/painel", icon: LayoutDashboard },
   {
     name: "Rede",
-    href: "/system/client/network",
+    href: "/painel/rede",
     icon: Network,
     submenu: [
-      { name: "Topologia da Rede", href: "/system/client/network/view-network" },
-      { name: "Equipamentos da Rede", href: "/system/client/assets" },
+      { name: "Topologia da Rede", href: "/painel/rede/topologia" },
+      { name: "Equipamentos da Rede", href: "/painel/rede/equipamentos" },
     ],
   },
   {
     name: "Análise",
-    href: "/system/client/analysis",
+    href: "/painel/analise",
     icon: BarChart2,
     submenu: [
-      { name: "Relatórios de Consumo", href: "/system/client/analysis/reports" },
-      { name: "Análises com IA", href: "/system/client/analysis/ai" },
+      { name: "Relatórios de Consumo", href: "/painel/analise/relatorios" },
+      { name: "Análises com IA", href: "/painel/analise/inteligencia-artificial" },
     ],
   },
-  // CORREÇÃO: Links atualizados para as páginas de suporte corretas.
   {
     name: "Suporte",
-    href: "/system/client/support",
+    href: "/painel/suporte",
     icon: LifeBuoy,
     submenu: [
-      { name: "Abrir Chamado", href: "/system/client/support/ticket_register" },
-      { name: "Consultar Chamados", href: "/system/client/support/ticket_view" },
+      { name: "Abrir Chamado", href: "/painel/suporte/abrir-chamado" },
+      { name: "Consultar Chamados", href: "/painel/suporte/consultar-chamados" },
     ],
   },
-  // CORREÇÃO: Links atualizados para as páginas de alertas corretas.
   {
     name: "Alertas",
-    href: "/system/client/alerts",
+    href: "/painel/alertas",
     icon: Bell,
     submenu: [
-      { name: "Configurar Contatos", href: "/system/client/alerts" },
-      { name: "Configurar Limites", href: "/system/client/alerts/thresholds" },
+      { name: "Configurar Contatos", href: "/painel/alertas/configurar-contatos" },
+      { name: "Configurar Limites", href: "/painel/alertas/configurar-limites" },
     ],
   },
 ]
 
 const adminNav: NavItem[] = [
-  { name: "Dashboard", href: "/system/admin/dashboard", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/administracao", icon: LayoutDashboard },
   {
     name: "Rede",
-    href: "/system/admin/network",
+    href: "/administracao/rede",
     icon: Network,
     submenu: [
-      { name: "Criar Nova Rede", href: "/system/admin/network/create-network" },
-      { name: "Criar Novo Equipamento", href: "/system/admin/assets/create-asset" },
-      { name: "Visualizar Rede", href: "/system/admin/network/search-network" },
-      { name: "Visualizar Equipamento", href: "/system/admin/assets" },
+      { name: "Criar Nova Rede", href: "/administracao/rede/criar-rede" },
+      { name: "Criar Novo Equipamento", href: "/administracao/equipamentos/criar" },
+      { name: "Visualizar Rede", href: "/administracao/rede/visualizar-rede" },
+      { name: "Visualizar Equipamento", href: "/administracao/equipamentos" },
     ],
   },
   {
     name: "Análises",
-    href: "/system/admin/analysis",
+    href: "/administracao/analises",
     icon: BarChart2,
     submenu: [
-      { name: "Relatórios de Consumo", href: "/system/admin/analysis/reports" },
-      { name: "Análises com IA", href: "/system/admin/analysis/ai" },
+      { name: "Relatórios de Consumo", href: "/administracao/analises/relatorios" },
+      { name: "Análises com IA", href: "/administracao/analises/inteligencia-artificial" },
     ],
   },
   {
     name: "Suporte",
-    href: "/system/admin/messages",
+    href: "/administracao/suporte",
     icon: Ticket,
     submenu: [
-      { name: "Chamados", href: "/system/admin/messages/tickets" },
-      { name: "Orçamentos", href: "/system/admin/messages/solicitations" },
-      { name: "Mensagens", href: "/system/admin/messages/contacts" },
+      { name: "Chamados", href: "/administracao/suporte/chamados" },
+      { name: "Orçamentos", href: "/administracao/suporte/orcamentos" },
+      { name: "Mensagens", href: "/administracao/suporte/mensagens" },
     ],
   },
-  { name: "Clientes", href: "/system/admin/accounts", icon: Users },
+  { name: "Clientes", href: "/administracao/clientes", icon: Users },
 ]
 
 // --- NavLink Component (for logged-out horizontal nav) ---
-const NavLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boolean }) => {
+const NavLink = ({ item }: { item: NavItem }) => {
   const pathname = usePathname()
   const hasSubmenu = !!item.submenu && item.submenu.length > 0
 
   const theme = {
     baseColor: "text-gray-600",
-    hoverColor: isAdmin ? "hover:text-red-600" : "hover:text-blue-600",
-    activeColor: isAdmin ? "text-red-600" : "text-blue-600",
+    hoverColor: "hover:text-blue-600",
+    activeColor: "text-blue-600",
   }
 
   const isActive =
@@ -199,7 +201,7 @@ const NavLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boolean }
 }
 
 // --- Vertical Sidebar Link Component ---
-const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boolean }) => {
+const SideBarLink = ({ item }: { item: NavItem }) => {
   const pathname = usePathname()
   const hasSubmenu = !!item.submenu && item.submenu.length > 0
   const isParentActive =
@@ -285,7 +287,7 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
               <Link
                 key={subitem.name}
                 href={subitem.href}
-                className={`block p-2 pl-4 rounded-md text-sm transition-colors ${
+                className={`block p-2 pl-4 rounded-md text-sm transition-colors mb-1 ${
                   isSubActive ? theme.submenuActiveText : `text-gray-400 ${theme.submenuHoverBg}`
                 }`}
               >
@@ -299,12 +301,51 @@ const SideBarLink = ({ item, isAdmin = false }: { item: NavItem; isAdmin?: boole
   )
 }
 
+// --- User Menu Component for Sidebar ---
+const SidebarUserMenu = ({ account, onLogout }: { account: Account | null; onLogout: () => void }) => {
+  if (!account) return null
+
+  const isAdmin = account.role === "admin"
+
+  return (
+    <div className="relative group mt-auto pt-4 border-t border-gray-800">
+      <Link
+        href={isAdmin ? "/administracao/perfil" : "/painel/perfil"}
+        className="flex items-center gap-2 text-sm font-semibold p-2 rounded-md cursor-pointer text-gray-300 hover:text-cyan-300 transition-colors"
+      >
+        {isAdmin ? <Shield className="w-5 h-5" /> : <User className="w-5 h-5" />}
+        <span className="flex-1">Olá, {account.contactName.split(" ")[0]}</span>
+        <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
+      </Link>
+      <div
+        className="absolute bottom-full left-0 mb-2 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg py-1 z-50
+                      opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2"
+      >
+        <Link
+          href={isAdmin ? "/administracao/perfil" : "/painel/perfil"}
+          className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+        >
+          <UserCog className="w-4 h-4" />
+          <span>Meu Perfil</span>
+        </Link>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-cyan-300 transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sair</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // --- Vertical Sidebar Component ---
-const SideBar = ({ navItems, isAdmin = false }: { navItems: NavItem[]; isAdmin?: boolean }) => {
+const SideBar = ({ navItems, account, onLogout }: { navItems: NavItem[]; account: Account | null; onLogout: () => void }) => {
   return (
     // AJUSTE: Fundo do sidebar e borda
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen bg-gray-950 border-r border-gray-800 hidden md:block">
-      <div className="h-full px-3 py-4 overflow-y-auto">
+      <div className="h-full px-3 py-4 overflow-y-auto flex flex-col">
         <Link href="/" className="flex items-center space-x-3">
           {/* AJUSTE: Cor do ícone no logo */}
           <div className="w-10 h-10 bg-cyan-600 rounded-lg flex items-center justify-center shadow-md shadow-cyan-500/20">
@@ -315,47 +356,122 @@ const SideBar = ({ navItems, isAdmin = false }: { navItems: NavItem[]; isAdmin?:
             <span className="text-xl font-bold text-gray-100">AIRscan</span>
           </div>
         </Link>
-        <ul className="mt-10 space-y-1 font-medium">
+        <ul className="mt-10 space-y-1 font-medium flex-1">
           {navItems.map((item) => (
             <li key={item.name}>
-              <SideBarLink item={item} isAdmin={isAdmin} />
+              <SideBarLink item={item} />
             </li>
           ))}
         </ul>
+        <SidebarUserMenu account={account} onLogout={onLogout} />
       </div>
     </aside>
   )
 }
 
-// --- Bottom Navigation Bar Component ---
-// CORREÇÃO: Removido o prop 'isAdmin' que não era utilizado.
-const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
+// --- User Menu Component for Bottom Nav ---
+const BottomUserMenu = ({ account }: { account: Account | null }) => {
   const pathname = usePathname()
+
+  if (!account) return null
+
+  const isAdmin = account.role === "admin"
+  const isProfileActive = pathname === (isAdmin ? "/administracao/perfil" : "/painel/perfil")
+
+  return (
+    <div className="relative flex-1">
+      <Link
+        href={isAdmin ? "/administracao/perfil" : "/painel/perfil"}
+        className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
+          isProfileActive ? "text-cyan-400" : "text-gray-400"
+        }`}
+      >
+        {isAdmin ? <Shield className="w-6 h-6 mb-1" strokeWidth={isProfileActive ? 2.5 : 2} /> : <User className="w-6 h-6 mb-1" strokeWidth={isProfileActive ? 2.5 : 2} />}
+        <span className="text-xs font-medium">Perfil</span>
+      </Link>
+    </div>
+  )
+}
+
+// --- Bottom Navigation Bar Component ---
+const BottomNavBar = ({ navItems, account }: { navItems: NavItem[]; account: Account | null }) => {
+  const pathname = usePathname()
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
 
   return (
     // AJUSTE: Fundo e borda da barra de navegação inferior
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-40">
-      <div className="flex justify-around max-w-7xl mx-auto">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-40 pb-4">
+      <div className="flex justify-around max-w-7xl mx-auto relative">
         {navItems.map((item) => {
           if (!item.icon) return null
 
+          const hasSubmenu = !!item.submenu && item.submenu.length > 0
           const isActive =
             (item.href !== "#" && pathname.startsWith(item.href)) ||
             (item.submenu && item.submenu.some((sub) => pathname.startsWith(sub.href)))
+          const isSubmenuOpen = openSubmenu === item.name
 
           return (
-            <Link
-              key={item.name}
-              href={item.submenu ? item.submenu[0].href : item.href}
-              className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
-                isActive ? "text-cyan-400" : "text-gray-400 hover:text-cyan-300"
-              }`}
-            >
-              <item.icon className="w-6 h-6 mb-1" strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-xs font-medium">{item.name}</span>
-            </Link>
+            <div key={item.name} className="relative flex-1">
+              {/* Item Principal */}
+              <Link
+                href={item.href}
+                className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
+                  isActive ? "text-cyan-400" : "text-gray-400"
+                }`}
+                onMouseEnter={() => hasSubmenu && setOpenSubmenu(item.name)}
+                onMouseLeave={() => hasSubmenu && setOpenSubmenu(null)}
+                onClick={() => {
+                  if (!hasSubmenu) {
+                    setOpenSubmenu(null)
+                  } else {
+                    setOpenSubmenu(isSubmenuOpen ? null : item.name)
+                  }
+                }}
+              >
+                <item.icon className="w-6 h-6 mb-1" strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-xs font-medium">{item.name}</span>
+              </Link>
+
+              {/* Submenu em Meia Lua */}
+              {hasSubmenu && item.submenu && (
+                <div
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 transition-all duration-300 ${
+                    isSubmenuOpen
+                      ? "opacity-100 visible translate-y-0"
+                      : "opacity-0 invisible translate-y-2 pointer-events-none"
+                  }`}
+                  onMouseEnter={() => setOpenSubmenu(item.name)}
+                  onMouseLeave={() => setOpenSubmenu(null)}
+                >
+                  {/* Meia Lua - Forma arredondada */}
+                  <div className="bg-gray-800 border border-gray-700 rounded-t-3xl rounded-b-lg shadow-2xl py-3 px-2 min-w-[180px] max-w-[220px]">
+                    <div className="space-y-1">
+                      {item.submenu.map((subitem) => {
+                        const isSubActive = pathname.startsWith(subitem.href)
+                        return (
+                          <Link
+                            key={subitem.name}
+                            href={subitem.href}
+                            onClick={() => setOpenSubmenu(null)}
+                            className={`block px-4 py-2.5 text-sm rounded-md transition-colors whitespace-nowrap ${
+                              isSubActive
+                                ? "text-cyan-300 bg-cyan-500/10 font-medium"
+                                : "text-gray-300 hover:bg-gray-700 hover:text-cyan-300"
+                            }`}
+                          >
+                            {subitem.name}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )
         })}
+        <BottomUserMenu account={account} />
       </div>
     </nav>
   )
@@ -366,19 +482,20 @@ interface MainNavProps {
   account: Account | null
   currentUser: CurrentUser
   showBottomNav?: boolean
+  onLogout?: () => void
 }
 
-export function MainNav({ account, currentUser, showBottomNav = false }: MainNavProps) {
+export function MainNav({ account, currentUser, showBottomNav = false, onLogout }: MainNavProps) {
   const userIsLoggedIn = !!currentUser && !!account
   const navToRender =
     account?.role === "admin" ? adminNav : account?.role === "cliente" ? clientNav : mainNav
 
   if (showBottomNav) {
-    return <BottomNavBar navItems={navToRender} />
+    return <BottomNavBar navItems={navToRender} account={account} />
   }
 
   if (userIsLoggedIn && account) {
-    return <SideBar navItems={navToRender} isAdmin={account.role === "admin"} />
+    return <SideBar navItems={navToRender} account={account} onLogout={onLogout || (() => {})} />
   } else {
     return (
       <div className="hidden md:block">
