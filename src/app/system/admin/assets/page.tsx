@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
@@ -24,6 +24,7 @@ interface Asset {
   networkId: string; // Referência à rede
   location: string;
   model: string;
+  apiUrl?: string;
 }
 
 interface NetworkWithAssets {
@@ -36,7 +37,45 @@ export default function ManageAssetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openNetworkId, setOpenNetworkId] = useState<string | null>(null);
+  const [apiStatusByAssetId, setApiStatusByAssetId] = useState<Record<string, boolean>>({});
+  const apiCheckReqRef = useRef(0);
   const router = useRouter();
+
+  const isApiOnline = async (apiUrl: string, timeoutMs = 5000): Promise<boolean> => {
+    const url = apiUrl.trim();
+    if (!url) return false;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        headers: { "ngrok-skip-browser-warning": "true" },
+        signal: controller.signal,
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  const getEffectiveStatus = (asset: Asset): Asset["status"] => {
+    // Se estiver em manutenção, respeita o status do cadastro
+    if (asset.status === "maintenance") return "maintenance";
+
+    // Se tiver API, usa resultado da verificação (quando disponível)
+    if (asset.apiUrl && asset.apiUrl.trim()) {
+      const online = apiStatusByAssetId[asset.id];
+      if (online === true) return "online";
+      if (online === false) return "offline";
+      // Ainda não verificado: cai no status salvo
+      return asset.status;
+    }
+
+    return asset.status;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +117,36 @@ export default function ManageAssetsPage() {
   }, []);
 
   const handleToggleNetwork = (networkId: string) => {
-    setOpenNetworkId(prevId => (prevId === networkId ? null : networkId));
+    setOpenNetworkId((prevId) => {
+      const nextId = prevId === networkId ? null : networkId;
+
+      // Ao abrir, verifica status via API para os ativos dessa rede (1x por abertura)
+      if (nextId) {
+        const reqId = ++apiCheckReqRef.current;
+        const networkData = networksWithAssets.find((n) => n.network.id === nextId);
+        const assetsToCheck =
+          networkData?.assets.filter((a) => typeof a.apiUrl === "string" && a.apiUrl.trim().length > 0) || [];
+
+        if (assetsToCheck.length > 0) {
+          Promise.all(
+            assetsToCheck.map(async (asset) => {
+              const ok = await isApiOnline(asset.apiUrl as string);
+              return { id: asset.id, ok };
+            })
+          ).then((results) => {
+            // ignora resultado de requests antigos
+            if (apiCheckReqRef.current !== reqId) return;
+            setApiStatusByAssetId((prev) => {
+              const next = { ...prev };
+              for (const r of results) next[r.id] = r.ok;
+              return next;
+            });
+          });
+        }
+      }
+
+      return nextId;
+    });
   };
 
   const handleEditAsset = (asset: Asset) => {
@@ -203,8 +271,8 @@ export default function ManageAssetsPage() {
                                </div>
                             </div>
                             <div className="flex items-center gap-2 self-end sm:self-center">
-                              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusProps(asset.status).className}`}>
-                                {getStatusProps(asset.status).text}
+                              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusProps(getEffectiveStatus(asset)).className}`}>
+                                {getStatusProps(getEffectiveStatus(asset)).text}
                               </span>
                               <button onClick={() => handleViewAsset(asset)} className="p-2 text-slate-400 hover:text-green-400 rounded-full hover:bg-green-500/10 transition-colors">
                                 <Eye className="w-5 h-5"/>
