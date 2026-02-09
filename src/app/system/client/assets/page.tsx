@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/controllers/authcontroller";
 import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -27,7 +27,7 @@ interface Asset {
   networkId: string;
   location: string;
   model: string;
-  apiUrl: string;
+  apiUrl?: string;
   maxPressure: number;
 }
 
@@ -96,6 +96,8 @@ export default function ClientDevicesPage() {
     const [networksWithAssets, setNetworksWithAssets] = useState<NetworkWithAssets[]>([]);
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
     const [loading, setLoading] = useState(true);
+    const [apiStatusByAssetId, setApiStatusByAssetId] = useState<Record<string, boolean>>({});
+    const apiCheckReqRef = useRef(0);
 
     // --- ESTADOS DE MONITORAMENTO (ATUALIZADOS) ---
     const [liveData, setLiveData] = useState<ApiDataPoint[]>([]);
@@ -144,6 +146,62 @@ export default function ClientDevicesPage() {
 
         fetchData();
     }, [account, authLoading]);
+
+    const isApiOnline = async (apiUrl: string, timeoutMs = 5000): Promise<boolean> => {
+        const url = (apiUrl || "").trim();
+        if (!url) return false;
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const res = await fetch(url, { headers: { "ngrok-skip-browser-warning": "true" }, signal: controller.signal });
+            return res.ok;
+        } catch {
+            return false;
+        } finally {
+            clearTimeout(t);
+        }
+    };
+
+    const getEffectiveStatus = (asset: Asset): Asset["status"] => {
+        if (asset.status === "maintenance") return "maintenance";
+        if (asset.apiUrl && asset.apiUrl.trim()) {
+            const online = apiStatusByAssetId[asset.id];
+            if (online === true) return "online";
+            if (online === false) return "offline";
+            return asset.status;
+        }
+        return asset.status;
+    };
+
+    // Verificação de status via API para todos os ativos com apiUrl (igual à visão admin)
+    useEffect(() => {
+        if (networksWithAssets.length === 0) return;
+        const assetsToCheck = networksWithAssets.flatMap(({ assets }) =>
+            assets.filter((a) => typeof a.apiUrl === "string" && a.apiUrl!.trim().length > 0)
+        );
+        if (assetsToCheck.length === 0) return;
+
+        const reqId = ++apiCheckReqRef.current;
+
+        const runCheck = async () => {
+            const results = await Promise.all(
+                assetsToCheck.map(async (asset) => {
+                    const ok = await isApiOnline(asset.apiUrl!);
+                    return { id: asset.id, ok };
+                })
+            );
+            if (apiCheckReqRef.current !== reqId) return;
+            setApiStatusByAssetId((prev) => {
+                const next = { ...prev };
+                for (const r of results) next[r.id] = r.ok;
+                return next;
+            });
+        };
+
+        runCheck();
+        const intervalId = setInterval(runCheck, 10000);
+        return () => clearInterval(intervalId);
+    }, [networksWithAssets]);
 
     // --- MODIFICADO: Buscar dados da API quando um ativo é selecionado ---
     useEffect(() => {
@@ -216,8 +274,9 @@ export default function ClientDevicesPage() {
     const getStatusProps = (status: string) => {
         switch (status) {
             case 'online': return { text: 'Online', className: 'bg-green-500/10 text-green-400' };
+            case 'maintenance': return { text: 'Manutenção', className: 'bg-yellow-500/10 text-yellow-400' };
             case 'offline': return { text: 'Offline', className: 'bg-red-500/10 text-red-400' };
-            default: return { text: 'Manutenção', className: 'bg-yellow-500/10 text-yellow-400' };
+            default: return { text: 'Indefinido', className: 'bg-slate-500/10 text-slate-400' };
         }
     };
     
@@ -315,7 +374,7 @@ export default function ClientDevicesPage() {
                                                         <li key={asset.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900/50 rounded-lg">
                                                             <div className="flex items-center gap-4 mb-3 sm:mb-0"><HardDrive className="w-6 h-6 text-slate-300"/><div><p className="font-semibold text-slate-100">{asset.name}</p><p className="text-sm text-slate-400">{asset.model} • {asset.location}</p></div></div>
                                                             <div className="flex items-center gap-4 self-end sm:self-center">
-                                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusProps(asset.status).className}`}>{getStatusProps(asset.status).text}</span>
+                                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusProps(getEffectiveStatus(asset)).className}`}>{getStatusProps(getEffectiveStatus(asset)).text}</span>
                                                                 <button onClick={() => handleViewAsset(asset)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"><Eye className="w-4 h-4"/>Visualizar</button>
                                                             </div>
                                                         </li>

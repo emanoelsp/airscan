@@ -138,7 +138,12 @@ export default function ClientTopologyPage() {
 
         const clientNetwork = networkSnapshot.docs[0];
         const topologyData = await networkController.getNetworkTopology(clientNetwork.id);
-        
+        if (topologyData?.assets) {
+          topologyData.assets = topologyData.assets.map((a) => ({
+            ...a,
+            status: (a.status || "offline") as "online" | "offline" | "warning",
+          }));
+        }
         setNetwork(topologyData);
         if (topologyData?.assets && topologyData.assets.length > 0) {
           setSelectedAsset(topologyData.assets[0]);
@@ -154,6 +159,69 @@ export default function ClientTopologyPage() {
     loadClientNetwork();
   }, [account, authLoading]);
 
+  /**
+   * Monitoramento dos ativos com API na rede para exibir status online/offline no mapa
+   * (mesmo comportamento da visão admin).
+   */
+  useEffect(() => {
+    if (!network) return;
+
+    const assetsWithApi = network.assets.filter(
+      (asset) => asset.type === "compressor" && asset.apiUrl
+    );
+    if (assetsWithApi.length === 0) return;
+
+    let isCancelled = false;
+
+    const updateAssetsStatus = async () => {
+      await Promise.all(
+        assetsWithApi.map(async (asset) => {
+          const apiUrl = (asset.apiUrl || "").trim();
+          if (!apiUrl) return;
+
+          return fetch(apiUrl, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+          })
+            .then((response) => {
+              if (!response.ok) throw new Error(`API retornou ${response.status}`);
+              if (isCancelled) return;
+              setNetwork((prev) =>
+                prev && prev.id === network.id
+                  ? {
+                      ...prev,
+                      assets: prev.assets.map((a) =>
+                        a.id === asset.id ? { ...a, status: "online" as const } : a
+                      ),
+                    }
+                  : prev
+              );
+            })
+            .catch(() => {
+              if (isCancelled) return;
+              setNetwork((prev) =>
+                prev && prev.id === network.id
+                  ? {
+                      ...prev,
+                      assets: prev.assets.map((a) =>
+                        a.id === asset.id ? { ...a, status: "offline" as const } : a
+                      ),
+                    }
+                  : prev
+              );
+            });
+        })
+      );
+    };
+
+    updateAssetsStatus();
+    const intervalId = setInterval(updateAssetsStatus, 10000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [network?.id]);
 
   // AJUSTE: Efeito para buscar dados da API com lógica de anomalia
   useEffect(() => {
