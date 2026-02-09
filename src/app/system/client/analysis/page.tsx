@@ -42,7 +42,7 @@ function ActionCard({ href, icon: Icon, title, description, color }: ActionCardP
   );
 }
 
-export default function AdminAnalysisPage() {
+export default function ClientAnalysisPage() {
   const { account } = useAuth();
 
   return (
@@ -52,23 +52,23 @@ export default function AdminAnalysisPage() {
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-100">Análises</h1>
           <p className="text-slate-300 mt-2 text-lg">
-            Relatórios de consumo e diagnóstico de IA — acesso rápido às ferramentas de análise.
+            {account?.companyName || "Sua empresa"} — Relatórios de consumo e diagnóstico de IA. Acesso rápido.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <ActionCard
-            href="/administracao/analises/relatorios"
+            href="/painel/analise/relatorios"
             icon={BarChart3}
             title="Relatório de Consumo"
-            description="Visualize leituras da IA por período, rede e equipamento. Dados da collection airscan_dados_ia."
+            description="Visualize leituras da IA por período, rede e equipamento. Dados da sua rede."
             color="blue"
           />
           <ActionCard
-            href="/administracao/analises/inteligencia-artificial"
+            href="/painel/analise/inteligencia-artificial"
             icon={TrendingUp}
             title="Diagnóstico de IA"
-            description="Falhas, vazamentos e custos. Relatórios de defeitos do bucket diagnostico (airscan_diagnostico_ia)."
+            description="Falhas, vazamentos e custos dos seus equipamentos. Relatórios de defeitos."
             color="purple"
           />
         </div>

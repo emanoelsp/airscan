@@ -92,7 +92,7 @@ const clientNav: NavItem[] = [
     icon: BarChart2,
     submenu: [
       { name: "Relatórios de Consumo", href: "/painel/analise/relatorios" },
-      { name: "Análises com IA", href: "/painel/analise/inteligencia-artificial" },
+      { name: "Diagnóstico de IA", href: "/painel/analise/inteligencia-artificial" },
     ],
   },
   {
@@ -135,7 +135,7 @@ const adminNav: NavItem[] = [
     icon: BarChart2,
     submenu: [
       { name: "Relatórios de Consumo", href: "/administracao/analises/relatorios" },
-      { name: "Análises com IA", href: "/administracao/analises/inteligencia-artificial" },
+      { name: "Diagnóstico de IA", href: "/administracao/analises/inteligencia-artificial" },
     ],
   },
   {

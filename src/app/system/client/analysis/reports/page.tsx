@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, TrendingUp, Clock, Loader2, BarChart3 } from "lucide-react";
+import Link from "next/link";
+import { Download, Clock, Loader2, BarChart3, TrendingUp, ArrowLeft } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { useAuth } from "@/lib/controllers/authcontroller";
 
 interface Network {
   id: string;
@@ -19,7 +21,8 @@ interface Asset {
   networkId: string;
 }
 
-export default function ReportsPage() {
+export default function ClientReportsPage() {
+  const { account } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState("week");
   const [selectedNetworkId, setSelectedNetworkId] = useState("all");
   const [selectedAssetId, setSelectedAssetId] = useState("all");
@@ -36,20 +39,28 @@ export default function ReportsPage() {
   ];
 
   useEffect(() => {
+    if (!account?.id) return;
     (async () => {
       try {
-        const netSnap = await getDocs(collection(db, "airscan_networks"));
+        const netSnap = await getDocs(query(collection(db, "airscan_networks"), where("clientId", "==", account.id)));
         const nets = netSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Network));
         setNetworks(nets);
+        if (nets.length === 0) {
+          setAssets([]);
+          return;
+        }
         const assetSnap = await getDocs(collection(db, "airscan_assets"));
-        setAssets(assetSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Asset)));
+        const allAssets = assetSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Asset));
+        const networkIds = new Set(nets.map((n) => n.id));
+        setAssets(allAssets.filter((a) => networkIds.has(a.networkId)));
       } catch (e) {
         console.error(e);
       }
     })();
-  }, []);
+  }, [account?.id]);
 
   useEffect(() => {
+    if (!account?.id) return;
     setLoading(true);
     setError(null);
     const days = selectedPeriod === "day" ? 1 : selectedPeriod === "week" ? 7 : 30;
@@ -64,17 +75,19 @@ export default function ReportsPage() {
     getDocs(query(collection(db, "airscan_dados_ia"), ...constraints))
       .then((snap) => {
         const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
-        rows.sort((a, b) => {
+        const clientNetworkIds = new Set(networks.length ? networks.map((n) => n.id) : []);
+        const filtered = clientNetworkIds.size ? rows.filter((r) => clientNetworkIds.has(String(r.networkId))) : rows;
+        filtered.sort((a, b) => {
           const ta = a.timestamp as Timestamp | undefined;
           const tb = b.timestamp as Timestamp | undefined;
           if (!ta || !tb) return 0;
           return tb.toMillis() - ta.toMillis();
         });
-        setData(rows);
+        setData(filtered);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
-  }, [selectedPeriod, selectedNetworkId, selectedAssetId]);
+  }, [account?.id, selectedPeriod, selectedNetworkId, selectedAssetId, networks]);
 
   const filteredAssets = selectedNetworkId === "all" ? assets : assets.filter((a) => a.networkId === selectedNetworkId);
 
@@ -111,11 +124,12 @@ export default function ReportsPage() {
     doc.setFontSize(16);
     doc.text("Relatório de Consumo (Análise IA)", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Período: ${periods.find((p) => p.value === selectedPeriod)?.label ?? selectedPeriod}`, 14, 28);
-    doc.text(`Rede: ${selectedNetworkId === "all" ? "Todas" : networks.find((n) => n.id === selectedNetworkId)?.name ?? selectedNetworkId}`, 14, 34);
-    doc.text(`Equipamento: ${selectedAssetId === "all" ? "Todos" : assets.find((a) => a.id === selectedAssetId)?.name ?? selectedAssetId}`, 14, 40);
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, 46);
-    doc.text(`Total de leituras: ${totalLeituras}  |  Pressão média: ${avgPressao.toFixed(2)} bar`, 14, 54);
+    doc.text("Visão do cliente — suas redes e equipamentos", 14, 26);
+    doc.text(`Período: ${periods.find((p) => p.value === selectedPeriod)?.label ?? selectedPeriod}`, 14, 34);
+    doc.text(`Rede: ${selectedNetworkId === "all" ? "Todas" : networks.find((n) => n.id === selectedNetworkId)?.name ?? selectedNetworkId}`, 14, 40);
+    doc.text(`Equipamento: ${selectedAssetId === "all" ? "Todos" : assets.find((a) => a.id === selectedAssetId)?.name ?? selectedAssetId}`, 14, 46);
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, 52);
+    doc.text(`Total de leituras: ${totalLeituras}  |  Pressão média: ${avgPressao.toFixed(2)} bar`, 14, 60);
     const tableData = data.slice(0, 50).map((row) => {
       const t = row.timestamp;
       const date = t && typeof (t as { toMillis?: () => number }).toMillis === "function"
@@ -130,7 +144,7 @@ export default function ReportsPage() {
       ];
     });
     autoTable(doc, {
-      startY: 60,
+      startY: 66,
       head: [["Data/Hora", "Equipamento", "Pressão (bar)", "Anomalia", "Status"]],
       body: tableData,
       theme: "grid",
@@ -145,8 +159,11 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
+          <Link href="/painel/analise" className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 mb-4">
+            <ArrowLeft className="w-4 h-4" /> Voltar para Análises
+          </Link>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Relatório de Consumo (Análise IA)</h1>
-          <p className="text-slate-400">Dados da collection airscan_dados_ia — por período, rede e equipamento</p>
+          <p className="text-slate-400">Dados da sua rede — por período, rede e equipamento</p>
         </div>
 
         <div className="bg-slate-800/40 border border-white/10 rounded-xl p-6 mb-8">
@@ -205,9 +222,7 @@ export default function ReportsPage() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-300 mb-6">
-            {error}
-          </div>
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-300 mb-6">{error}</div>
         )}
 
         {loading ? (
@@ -277,22 +292,21 @@ export default function ReportsPage() {
                         ? new Date((t as { toMillis: () => number }).toMillis())
                         : t ? new Date(t as string) : null;
                       return (
-                      <tr key={typeof row.id === "string" ? row.id : `report-${idx}`} className="hover:bg-slate-700/30">
-                        <td className="px-6 py-3 text-sm text-slate-300">
-                          {date ? date.toLocaleString("pt-BR") : "—"}
-                        </td>
-                        <td className="px-6 py-3 text-sm text-slate-200">{String(row.assetName || row.assetId || "—")}</td>
-                        <td className="px-6 py-3 text-sm font-mono text-cyan-300">
-                          {row.pressao != null ? Number(row.pressao).toFixed(2) : "—"} bar
-                        </td>
-                        <td className="px-6 py-3">
-                          <span className={row.is_anomaly ? "text-amber-400" : "text-slate-400"}>
-                            {row.is_anomaly ? "Sim" : "Não"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 text-sm text-slate-400">{String(row.status_sistema || "—")}</td>
-                      </tr>
-                    ); })}
+                        <tr key={typeof row.id === "string" ? row.id : `report-${idx}`} className="hover:bg-slate-700/30">
+                          <td className="px-6 py-3 text-sm text-slate-300">{date ? date.toLocaleString("pt-BR") : "—"}</td>
+                          <td className="px-6 py-3 text-sm text-slate-200">{String(row.assetName || row.assetId || "—")}</td>
+                          <td className="px-6 py-3 text-sm font-mono text-cyan-300">
+                            {row.pressao != null ? Number(row.pressao).toFixed(2) : "—"} bar
+                          </td>
+                          <td className="px-6 py-3">
+                            <span className={row.is_anomaly ? "text-amber-400" : "text-slate-400"}>
+                              {row.is_anomaly ? "Sim" : "Não"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-sm text-slate-400">{String(row.status_sistema || "—")}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

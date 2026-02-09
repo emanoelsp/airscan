@@ -1,0 +1,55 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "airscan_diagnostico_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assetId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "airscan_diagnostico_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "severidade", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "airscan_diagnostico_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assetId", "order": "ASCENDING" },
+        { "fieldPath": "severidade", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "airscan_dados_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "networkId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "airscan_dados_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assetId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "airscan_dados_ia",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "networkId", "order": "ASCENDING" },
+        { "fieldPath": "assetId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -77,7 +77,7 @@ export function Footer() {
       href: "/painel/analise",
       submenu: [
         { name: "Relatórios de Consumo", href: "/painel/analise/relatorios" },
-        { name: "Análises com IA", href: "/painel/analise/inteligencia-artificial" },
+        { name: "Diagnóstico de IA", href: "/painel/analise/inteligencia-artificial" },
       ],
     },
     {
@@ -110,8 +110,8 @@ export function Footer() {
       name: "Análises",
       href: "/administracao/analises",
       submenu: [
-        { name: "Relatórios de Consumo", href: "/administracao/analises/relatorios" },
-        { name: "Análises com IA", href: "/administracao/analises/inteligencia-artificial" },
+{ name: "Relatórios de Consumo", href: "/administracao/analises/relatorios" },
+      { name: "Diagnóstico de IA", href: "/administracao/analises/inteligencia-artificial" },
       ],
     },
     {

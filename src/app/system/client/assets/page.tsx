@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/controllers/authcontroller";
 import { db } from "@/lib/firebase/firebaseconfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { 
     ArrowLeft, Share2, HardDrive, Server, Eye, Loader2,
     Activity, Clock, Siren, CheckCircle2, AlertTriangle, TrendingUp
@@ -265,6 +265,27 @@ export default function ClientDevicesPage() {
                     lastUpdate,
                 };
                 setRealTimeDataAI(newAI);
+
+                // Salva leitura da IA na collection airscan_dados_ia (rede + equipamento)
+                if (selectedAsset?.id) {
+                  addDoc(collection(db, "airscan_dados_ia"), {
+                    networkId: selectedAsset.networkId,
+                    assetId: selectedAsset.id,
+                    assetName: selectedAsset.name,
+                    timestamp: serverTimestamp(),
+                    pressao: pressureValue,
+                    is_anomaly: isAnomaly,
+                    status_sistema: newAI.status_sistema,
+                    mse,
+                    uncertainty: newAI.uncertainty,
+                    drift: newAI.drift,
+                    lpm_vazamento: newAI.lpm_vazamento,
+                    gap: data.gap != null ? Number(data.gap) : 0,
+                    threshold,
+                    duracao_minutos: data.duracao_minutos != null ? Number(data.duracao_minutos) : 0,
+                    severidade: data.severidade ?? "normal",
+                  }).catch(() => {});
+                }
 
                 const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 setLiveData(prev => [...prev.slice(-29), { time: timeStr, pressao: pressureValue, is_anomaly: isAnomaly }]);
