@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { LucideProps } from "lucide-react"
@@ -150,7 +150,11 @@ const adminNav: NavItem[] = [
   { name: "Clientes", href: "/administracao/clientes", icon: Users },
 ]
 
-// --- NavLink Component (for logged-out horizontal nav) ---
+// Apenas o link da página atual fica ativo (ciano/azul)
+const isExactPath = (pathname: string, href: string) =>
+  pathname.replace(/\/$/, "") === href.replace(/\/$/, "")
+
+// --- NavLink Component (for logged-out horizontal nav): ativo só no link exato ---
 const NavLink = ({ item }: { item: NavItem }) => {
   const pathname = usePathname()
   const hasSubmenu = !!item.submenu && item.submenu.length > 0
@@ -161,16 +165,16 @@ const NavLink = ({ item }: { item: NavItem }) => {
     activeColor: "text-blue-600",
   }
 
-  const isActive =
-    (item.href !== "#" && pathname.startsWith(item.href)) ||
-    (hasSubmenu && item.submenu?.some((sub) => pathname.startsWith(sub.href)))
+  const linkIsActive =
+    item.href !== "#" &&
+    (isExactPath(pathname, item.href) || (hasSubmenu && pathname.startsWith(item.href + "#")))
 
   return (
     <div className="relative group h-full flex items-center">
       <Link
         href={item.href}
         className={`flex items-center text-sm font-medium transition-colors duration-300 ${
-          isActive ? theme.activeColor : `${theme.baseColor} ${theme.hoverColor}`
+          linkIsActive ? theme.activeColor : `${theme.baseColor} ${theme.hoverColor}`
         }`}
       >
         {item.name}
@@ -183,17 +187,20 @@ const NavLink = ({ item }: { item: NavItem }) => {
           className="absolute top-full left-0 mt-0 w-56 bg-white rounded-md shadow-lg border py-2 z-50
                       opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2"
         >
-          {item.submenu?.map((subitem) => (
-            <Link
-              key={subitem.name}
-              href={subitem.href}
-              className={`block px-4 py-2 text-sm ${
-                pathname.startsWith(subitem.href) ? theme.activeColor : "text-gray-700"
-              } ${theme.hoverColor} hover:bg-gray-50`}
-            >
-              {subitem.name}
-            </Link>
-          ))}
+          {item.submenu?.map((subitem) => {
+            const isSubActive = pathname === subitem.href || (subitem.href.includes("#") && pathname.startsWith(subitem.href.split("#")[0]))
+            return (
+              <Link
+                key={subitem.name}
+                href={subitem.href}
+                className={`block px-4 py-2 text-sm ${
+                  isSubActive ? theme.activeColor : "text-gray-700"
+                } ${theme.hoverColor} hover:bg-gray-50`}
+              >
+                {subitem.name}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
@@ -204,26 +211,26 @@ const NavLink = ({ item }: { item: NavItem }) => {
 const SideBarLink = ({ item }: { item: NavItem }) => {
   const pathname = usePathname()
   const hasSubmenu = !!item.submenu && item.submenu.length > 0
-  const isParentActive =
-    (item.href !== "#" && pathname.startsWith(item.href)) ||
-    (hasSubmenu && item.submenu?.some((sub) => pathname.startsWith(sub.href)))
+  const exactMatch = item.href !== "#" && isExactPath(pathname, item.href)
+  const hasActiveChild = hasSubmenu && item.submenu?.some((sub) => pathname.startsWith(sub.href))
+  const linkIsActive = exactMatch
+  const keepSubmenuOpen = exactMatch || hasActiveChild
 
-  const [isOpen, setIsOpen] = useState(isParentActive)
+  const [isOpen, setIsOpen] = useState(keepSubmenuOpen)
 
   useEffect(() => {
-    setIsOpen(isParentActive)
-  }, [isParentActive])
+    setIsOpen(keepSubmenuOpen)
+  }, [keepSubmenuOpen])
 
-  // AJUSTE: Cores para o tema "Preto Total com Opal"
   const theme = {
-    baseBg: "hover:bg-gray-800", // Fundo ao passar o mouse
-    activeBg: "bg-white/5", // Fundo do item ativo (sutilmente branco/translúcido)
-    baseText: "text-gray-400", // Texto padrão
-    activeText: "text-cyan-300 font-semibold", // Texto do item ativo (cor de opala)
-    iconColor: "text-cyan-300", // Cor do ícone do item ativo (cor de opala)
-    baseIconColor: "text-gray-500", // Cor do ícone padrão
-    submenuActiveText: "text-cyan-400 font-medium", // Texto do subitem ativo (cor de opala mais intensa)
-    submenuHoverBg: "hover:bg-gray-800", // Fundo do subitem ao passar o mouse
+    baseBg: "hover:bg-gray-800",
+    activeBg: "bg-white/5",
+    baseText: "text-gray-400",
+    activeText: "text-cyan-300 font-semibold",
+    iconColor: "text-cyan-300",
+    baseIconColor: "text-gray-500",
+    submenuActiveText: "text-cyan-400 font-medium",
+    submenuHoverBg: "hover:bg-gray-800",
   }
 
   if (!hasSubmenu) {
@@ -231,12 +238,12 @@ const SideBarLink = ({ item }: { item: NavItem }) => {
       <Link
         href={item.href}
         className={`w-full flex items-center p-3 rounded-lg transition-colors text-sm ${
-          isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
+          linkIsActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
         }`}
       >
         {item.icon && (
           <item.icon
-            className={`w-5 h-5 mr-3 flex-shrink-0 ${isParentActive ? theme.iconColor : theme.baseIconColor}`}
+            className={`w-5 h-5 mr-3 flex-shrink-0 ${linkIsActive ? theme.iconColor : theme.baseIconColor}`}
           />
         )}
         <span className="flex-1 text-left">{item.name}</span>
@@ -248,28 +255,27 @@ const SideBarLink = ({ item }: { item: NavItem }) => {
     <div>
       <div
         className={`w-full flex items-center rounded-lg transition-colors text-sm ${
-          isParentActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
+          linkIsActive ? `${theme.activeBg} ${theme.activeText}` : `${theme.baseText} ${theme.baseBg}`
         }`}
       >
         <Link href={item.href} className="flex-grow flex items-center p-3 rounded-l-lg">
           {item.icon && (
             <item.icon
-              className={`w-5 h-5 mr-3 flex-shrink-0 ${isParentActive ? theme.iconColor : theme.baseIconColor}`}
+              className={`w-5 h-5 mr-3 flex-shrink-0 ${linkIsActive ? theme.iconColor : theme.baseIconColor}`}
             />
           )}
           <span className="flex-1 text-left">{item.name}</span>
         </Link>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`p-3 rounded-r-lg hover:bg-gray-800`} // AJUSTE: Hover para o botão do submenu
+          className="p-3 rounded-r-lg hover:bg-gray-800"
           aria-label={`Expandir ${item.name}`}
         >
           <ChevronDown
             className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${
-              isParentActive ? theme.iconColor : theme.baseIconColor
+              linkIsActive ? theme.iconColor : theme.baseIconColor
             }`}
-          />{" "}
-          {/* AJUSTE: Cor do ícone chevron */}
+          />
         </button>
       </div>
 
@@ -279,10 +285,8 @@ const SideBarLink = ({ item }: { item: NavItem }) => {
         }`}
       >
         <div className="pt-2 pb-1 space-y-1 border-l border-gray-700 ml-[1.375rem]">
-          {" "}
-          {/* AJUSTE: Cor da borda do submenu */}
           {item.submenu?.map((subitem) => {
-            const isSubActive = pathname.startsWith(subitem.href)
+            const isSubActive = isExactPath(pathname, subitem.href)
             return (
               <Link
                 key={subitem.name}
@@ -369,46 +373,34 @@ const SideBar = ({ navItems, account, onLogout }: { navItems: NavItem[]; account
   )
 }
 
-// --- User Menu Component for Bottom Nav ---
-const BottomUserMenu = ({ account }: { account: Account | null }) => {
-  const pathname = usePathname()
-
-  if (!account) return null
-
-  const isAdmin = account.role === "admin"
-  const isProfileActive = pathname === (isAdmin ? "/administracao/perfil" : "/painel/perfil")
-
-  return (
-    <div className="relative flex-1">
-      <Link
-        href={isAdmin ? "/administracao/perfil" : "/painel/perfil"}
-        className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
-          isProfileActive ? "text-cyan-400" : "text-gray-400"
-        }`}
-      >
-        {isAdmin ? <Shield className="w-6 h-6 mb-1" strokeWidth={isProfileActive ? 2.5 : 2} /> : <User className="w-6 h-6 mb-1" strokeWidth={isProfileActive ? 2.5 : 2} />}
-        <span className="text-xs font-medium">Perfil</span>
-      </Link>
-    </div>
-  )
-}
-
-// --- Bottom Navigation Bar Component ---
-const BottomNavBar = ({ navItems, account }: { navItems: NavItem[]; account: Account | null }) => {
+// --- Bottom Navigation Bar Component (mobile: sem ícone Perfil; perfil fica no menu superior) ---
+const BottomNavBar = ({ navItems }: { navItems: NavItem[] }) => {
   const pathname = usePathname()
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+  }
+
+  const scheduleClose = (ms = 280) => {
+    clearCloseTimeout()
+    closeTimeoutRef.current = setTimeout(() => setOpenSubmenu(null), ms)
+  }
 
   return (
-    // AJUSTE: Fundo e borda da barra de navegação inferior
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-800 shadow-[0_-1px_3px_rgba(0,0,0,0.05)] z-40 pb-4">
       <div className="flex justify-around max-w-7xl mx-auto relative">
         {navItems.map((item) => {
           if (!item.icon) return null
 
           const hasSubmenu = !!item.submenu && item.submenu.length > 0
-          const isActive =
-            (item.href !== "#" && pathname.startsWith(item.href)) ||
-            (item.submenu && item.submenu.some((sub) => pathname.startsWith(sub.href)))
+          const isActive = hasSubmenu
+            ? pathname.startsWith(item.href)
+            : (item.href !== "#" && isExactPath(pathname, item.href))
           const isSubmenuOpen = openSubmenu === item.name
 
           return (
@@ -419,8 +411,11 @@ const BottomNavBar = ({ navItems, account }: { navItems: NavItem[]; account: Acc
                 className={`flex flex-col items-center justify-center text-center p-2 w-full transition-colors duration-200 ${
                   isActive ? "text-cyan-400" : "text-gray-400"
                 }`}
-                onMouseEnter={() => hasSubmenu && setOpenSubmenu(item.name)}
-                onMouseLeave={() => hasSubmenu && setOpenSubmenu(null)}
+                onMouseEnter={() => {
+                  clearCloseTimeout()
+                  if (hasSubmenu) setOpenSubmenu(item.name)
+                }}
+                onMouseLeave={() => hasSubmenu && scheduleClose()}
                 onClick={() => {
                   if (!hasSubmenu) {
                     setOpenSubmenu(null)
@@ -433,22 +428,25 @@ const BottomNavBar = ({ navItems, account }: { navItems: NavItem[]; account: Acc
                 <span className="text-xs font-medium">{item.name}</span>
               </Link>
 
-              {/* Submenu em Meia Lua */}
+              {/* Submenu em Meia Lua: pt-2 cria “ponte” para o hover não cortar no meio do caminho */}
               {hasSubmenu && item.submenu && (
                 <div
-                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 transition-all duration-300 ${
+                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pt-2 transition-all duration-300 ${
                     isSubmenuOpen
-                      ? "opacity-100 visible translate-y-0"
+                      ? "opacity-100 visible translate-y-0 pointer-events-auto"
                       : "opacity-0 invisible translate-y-2 pointer-events-none"
                   }`}
-                  onMouseEnter={() => setOpenSubmenu(item.name)}
-                  onMouseLeave={() => setOpenSubmenu(null)}
+                  onMouseEnter={() => {
+                    clearCloseTimeout()
+                    setOpenSubmenu(item.name)
+                  }}
+                  onMouseLeave={() => scheduleClose(120)}
                 >
                   {/* Meia Lua - Forma arredondada */}
                   <div className="bg-gray-800 border border-gray-700 rounded-t-3xl rounded-b-lg shadow-2xl py-3 px-2 min-w-[180px] max-w-[220px]">
                     <div className="space-y-1">
                       {item.submenu.map((subitem) => {
-                        const isSubActive = pathname.startsWith(subitem.href)
+                        const isSubActive = isExactPath(pathname, subitem.href)
                         return (
                           <Link
                             key={subitem.name}
@@ -471,7 +469,6 @@ const BottomNavBar = ({ navItems, account }: { navItems: NavItem[]; account: Acc
             </div>
           )
         })}
-        <BottomUserMenu account={account} />
       </div>
     </nav>
   )
@@ -491,7 +488,7 @@ export function MainNav({ account, currentUser, showBottomNav = false, onLogout 
     account?.role === "admin" ? adminNav : account?.role === "cliente" ? clientNav : mainNav
 
   if (showBottomNav) {
-    return <BottomNavBar navItems={navToRender} account={account} />
+    return <BottomNavBar navItems={navToRender} />
   }
 
   if (userIsLoggedIn && account) {

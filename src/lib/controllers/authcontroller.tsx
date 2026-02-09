@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
@@ -12,6 +12,7 @@ interface AuthContextType {
   currentUser: User | null;
   account: Account | null;
   loading: boolean;
+  refreshAccount: () => Promise<void>;
 }
 
 // Cria o Contexto React
@@ -22,28 +23,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchAccountByEmail = useCallback(async (email: string | undefined) => {
+    if (!email) {
+      setAccount(null);
+      return;
+    }
+    const accountsRef = collection(db, "airscan_accounts");
+    const q = query(accountsRef, where("email", "==", email), limit(1));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const accountDoc = querySnapshot.docs[0];
+      setAccount({ id: accountDoc.id, ...accountDoc.data() } as Account);
+    } else {
+      setAccount(null);
+    }
+  }, []);
+
+  const refreshAccount = useCallback(async () => {
+    if (currentUser?.email) await fetchAccountByEmail(currentUser.email);
+  }, [currentUser?.email, fetchAccountByEmail]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        const accountsRef = collection(db, "airscan_accounts");
-        const q = query(accountsRef, where("email", "==", user.email), limit(1));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const accountDoc = querySnapshot.docs[0];
-          setAccount({ id: accountDoc.id, ...accountDoc.data() } as Account);
-        } else {
-            setAccount(null);
-        }
+        await fetchAccountByEmail(user.email ?? undefined);
       } else {
         setAccount(null);
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [fetchAccountByEmail]);
 
-  const value = { currentUser, account, loading };
+  const value = { currentUser, account, loading, refreshAccount };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 }

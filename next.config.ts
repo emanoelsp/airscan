@@ -103,7 +103,7 @@ const nextConfig: NextConfig = {
       // Perfil
       {
         source: '/painel/perfil',
-        destination: '/client/profile',
+        destination: '/system/client/profile',
       },
 
       // ============================================
