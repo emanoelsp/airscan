@@ -17,11 +17,15 @@ import type { Asset as BaseAsset } from "@/lib/controllers/networkcontroller";
 
 // --- INTERFACES ---
 
-// Estende o Asset da rede com campos de contatos usados para alertas
+// Estende o Asset da rede com campos de contatos e limites
 interface Asset extends BaseAsset {
   contactName?: string;
   contactEmails?: string[];
   contactPhones?: string[];
+  limitLow?: number;
+  limitNormal?: number;
+  limitRisk?: number;
+  limitCritical?: number;
 }
 
 interface NetworkInfo {
@@ -107,7 +111,14 @@ function ViewAssetPage() {
   const [leakDuration, setLeakDuration] = useState(0);
   const leakDbIdRef = useRef<string | null>(null);
   const leakStartTimeRef = useRef<number | null>(null);
+  const pressureReadingsRef = useRef<number[]>([]);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
+
+  const has10ConsecutiveDecreasing = (readings: number[]): boolean => {
+    if (readings.length < 11) return false;
+    for (let i = 0; i < 10; i++) if (readings[i] <= readings[i + 1]) return false;
+    return true;
+  };
 
   // Estatísticas Locais (Mín/Máx do histórico visível)
   const [stats, setStats] = useState({ min: 0, max: 0, current: 0 });
@@ -141,6 +152,7 @@ function ViewAssetPage() {
     setConsumptionStatus('normal'); setLeakStartTime(null); setLeakDuration(0);
     leakDbIdRef.current = null;
     leakStartTimeRef.current = null;
+    pressureReadingsRef.current = [];
     setIsOnline(null);
 
     if (!currentAsset?.apiUrl) return;
@@ -189,8 +201,13 @@ function ViewAssetPage() {
             return [...prev, pt].slice(-2000); // Buffer
         });
 
-        // Lógica de Vazamento (Controller Integration)
-        if (newData.status_sistema.includes("Aguardando")) {
+        const prevReadings = pressureReadingsRef.current;
+        const nextReadings = [...prevReadings, newData.pressao].slice(-11);
+        pressureReadingsRef.current = nextReadings;
+        const canResumeAnalysis = has10ConsecutiveDecreasing(nextReadings);
+
+        // Aguardando compressor em carga: só mantém "waiting" se ainda não houver 10 leituras consecutivas baixando; senão volta a analisar
+        if (newData.status_sistema.includes("Aguardando") && !canResumeAnalysis) {
             setConsumptionStatus('waiting');
         } else if (newData.is_anomaly) {
             const now = Date.now();
@@ -397,11 +414,23 @@ function ViewAssetPage() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} interval="preserveStartEnd" minTickGap={30} />
                                     <YAxis domain={['auto', 'auto']} stroke="#64748b" fontSize={10} tickLine={false} width={30} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }} itemStyle={{color: '#e2e8f0'}}/>
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }} itemStyle={{color: '#e2e8f0'}} formatter={(value: number) => [typeof value === 'number' ? value.toFixed(2) : value, 'Pressão']}/>
+                                    {typeof currentAsset?.limitLow === 'number' && <ReferenceLine y={currentAsset.limitLow} stroke="#22c55e" strokeDasharray="5 5" />}
+                                    {typeof currentAsset?.limitNormal === 'number' && <ReferenceLine y={currentAsset.limitNormal} stroke="#3b82f6" strokeDasharray="5 5" />}
+                                    {typeof currentAsset?.limitRisk === 'number' && <ReferenceLine y={currentAsset.limitRisk} stroke="#f59e0b" strokeDasharray="5 5" />}
+                                    {typeof currentAsset?.limitCritical === 'number' && <ReferenceLine y={currentAsset.limitCritical} stroke="#ef4444" strokeDasharray="5 5" />}
                                     <Line type="monotone" dataKey="pressao" name="Pressão" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
+                        {(typeof currentAsset?.limitLow === 'number' || typeof currentAsset?.limitNormal === 'number' || typeof currentAsset?.limitRisk === 'number' || typeof currentAsset?.limitCritical === 'number') && (
+                            <div className="mt-3 flex flex-wrap gap-4 text-xs">
+                                {typeof currentAsset?.limitLow === 'number' && <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 border-t-2 border-dashed border-green-500" /> Baixo: {currentAsset.limitLow.toFixed(2)} bar</span>}
+                                {typeof currentAsset?.limitNormal === 'number' && <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 border-t-2 border-dashed border-blue-500" /> Normal: {currentAsset.limitNormal.toFixed(2)} bar</span>}
+                                {typeof currentAsset?.limitRisk === 'number' && <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 border-t-2 border-dashed border-amber-500" /> Risco: {currentAsset.limitRisk.toFixed(2)} bar</span>}
+                                {typeof currentAsset?.limitCritical === 'number' && <span className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5 border-dashed border-red-500 border-t-2" /> Crítico: {currentAsset.limitCritical.toFixed(2)} bar</span>}
+                            </div>
+                        )}
                     </div>
 
                     {/* LINHA 3: MANÔMETRO E ESTATÍSTICAS FÍSICAS */}
@@ -418,7 +447,7 @@ function ViewAssetPage() {
                                 </ResponsiveContainer>
                              </div>
                              <div className="absolute inset-0 flex flex-col items-center justify-center mt-8">
-                                <span className="text-4xl font-bold text-white">{realTimeData?.pressao.toFixed(1)}</span>
+                                <span className="text-4xl font-bold text-white">{realTimeData?.pressao.toFixed(2)}</span>
                                 <span className="text-xs text-slate-400 font-bold">BAR</span>
                              </div>
                         </div>
@@ -443,6 +472,14 @@ function ViewAssetPage() {
                                      </div>
                                  ))}
                              </div>
+                             {(typeof currentAsset?.limitLow === 'number' || typeof currentAsset?.limitNormal === 'number' || typeof currentAsset?.limitRisk === 'number' || typeof currentAsset?.limitCritical === 'number') && (
+                                 <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
+                                     {typeof currentAsset?.limitLow === 'number' && <span>Baixo: {currentAsset.limitLow.toFixed(2)} bar</span>}
+                                     {typeof currentAsset?.limitNormal === 'number' && <span>Normal: {currentAsset.limitNormal.toFixed(2)} bar</span>}
+                                     {typeof currentAsset?.limitRisk === 'number' && <span>Risco: {currentAsset.limitRisk.toFixed(2)} bar</span>}
+                                     {typeof currentAsset?.limitCritical === 'number' && <span>Crítico: {currentAsset.limitCritical.toFixed(2)} bar</span>}
+                                 </div>
+                             )}
                         </div>
                     </div>
 
@@ -478,7 +515,7 @@ function ViewAssetPage() {
                                         </div>
                                         <div className="flex justify-between items-center border-b border-white/10 pb-2">
                                             <span className="text-xs text-slate-400 uppercase">Intensidade</span>
-                                            <span className="font-mono text-white font-bold">{realTimeData?.lpm_vazamento.toFixed(1)} LPM</span>
+                                            <span className="font-mono text-white font-bold">{realTimeData?.lpm_vazamento.toFixed(2)} LPM</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs text-slate-400 uppercase">Custo Total</span>
