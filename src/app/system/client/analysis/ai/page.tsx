@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getLogoDataUrl } from "@/lib/pdfLogo";
 import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { useAuth } from "@/lib/controllers/authcontroller";

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Download, TrendingUp, Clock, Loader2, BarChart3 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getLogoDataUrl } from "@/lib/pdfLogo";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { db } from "@/lib/firebase/firebaseconfig";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
@@ -106,16 +107,28 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    const logoData = await getLogoDataUrl().catch(() => null);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    let y = 14;
+    if (logoData) {
+      doc.addImage(logoData, "PNG", 14, 8, 45, 12);
+      y = 26;
+    }
     doc.setFontSize(16);
-    doc.text("Relatório de Consumo (Análise IA)", 14, 20);
+    doc.text("Relatório de Consumo (Análise IA)", 14, y);
+    y += 8;
     doc.setFontSize(10);
-    doc.text(`Período: ${periods.find((p) => p.value === selectedPeriod)?.label ?? selectedPeriod}`, 14, 28);
-    doc.text(`Rede: ${selectedNetworkId === "all" ? "Todas" : networks.find((n) => n.id === selectedNetworkId)?.name ?? selectedNetworkId}`, 14, 34);
-    doc.text(`Equipamento: ${selectedAssetId === "all" ? "Todos" : assets.find((a) => a.id === selectedAssetId)?.name ?? selectedAssetId}`, 14, 40);
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, 46);
-    doc.text(`Total de leituras: ${totalLeituras}  |  Pressão média: ${avgPressao.toFixed(2)} bar`, 14, 54);
+    doc.text(`Período: ${periods.find((p) => p.value === selectedPeriod)?.label ?? selectedPeriod}`, 14, y);
+    y += 6;
+    doc.text(`Rede: ${selectedNetworkId === "all" ? "Todas" : networks.find((n) => n.id === selectedNetworkId)?.name ?? selectedNetworkId}`, 14, y);
+    y += 6;
+    doc.text(`Equipamento: ${selectedAssetId === "all" ? "Todos" : assets.find((a) => a.id === selectedAssetId)?.name ?? selectedAssetId}`, 14, y);
+    y += 6;
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y);
+    y += 6;
+    doc.text(`Total de leituras: ${totalLeituras}  |  Pressão média: ${avgPressao.toFixed(2)} bar`, 14, y);
+    y += 8;
     const tableData = data.slice(0, 50).map((row) => {
       const t = row.timestamp;
       const date = t && typeof (t as { toMillis?: () => number }).toMillis === "function"
@@ -130,7 +143,7 @@ export default function ReportsPage() {
       ];
     });
     autoTable(doc, {
-      startY: 60,
+      startY: y,
       head: [["Data/Hora", "Equipamento", "Pressão (bar)", "Anomalia", "Status"]],
       body: tableData,
       theme: "grid",
