@@ -56,6 +56,7 @@ const clientNav: NavItem[] = [
     name: "Alertas",
     href: "/painel/alertas",
     submenu: [
+      { name: "Painel de Alertas", href: "/painel/alertas/painel" },
       { name: "Configurar Contatos", href: "/painel/alertas/configurar-contatos" },
       { name: "Configurar Limites", href: "/painel/alertas/configurar-limites" },
     ],

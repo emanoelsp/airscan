@@ -88,8 +88,16 @@ const nextConfig: NextConfig = {
         destination: '/system/client/alerts',
       },
       {
+        source: '/painel/alertas/painel',
+        destination: '/system/client/alerts/panel',
+      },
+      {
+        source: '/painel/alertas/diagnostico/:id',
+        destination: '/system/client/alerts/diagnostico/:id',
+      },
+      {
         source: '/painel/alertas/configurar-contatos',
-        destination: '/system/client/alerts',
+        destination: '/system/client/alerts/contacts',
       },
       {
         source: '/painel/alertas/configurar-limites',

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, User } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/firebaseconfig";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { Account } from "./accountscontroller";
@@ -128,6 +128,27 @@ export const authController = {
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
       throw new Error("Não foi possível sair da conta.");
+    }
+  },
+
+  /**
+   * Atualiza a senha do usuário logado no Firebase Auth.
+   * Requer login recente; se falhar com requires-recent-login, o usuário deve fazer logout e login novamente.
+   */
+  updatePassword: async (newPassword: string): Promise<void> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Nenhum usuário logado.");
+    if (newPassword.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres.");
+    try {
+      await updatePassword(user, newPassword);
+    } catch (error: unknown) {
+      console.error("Erro ao atualizar senha:", error);
+      if (error instanceof FirebaseError && error.code === "auth/requires-recent-login") {
+        throw new Error(
+          "Por segurança, faça logout e login novamente antes de alterar a senha."
+        );
+      }
+      throw new Error("Não foi possível alterar a senha.");
     }
   },
 };

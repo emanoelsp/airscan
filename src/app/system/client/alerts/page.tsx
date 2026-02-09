@@ -170,10 +170,10 @@ export default function AlertsDashboardPage() {
                                     description="Adicione ou remova grupos de contatos associados a cada equipamento."
                                 />
                                 <ActionCard 
-                                    href="/sistema/alertas"
+                                    href="/painel/alertas/painel"
                                     icon={BarChart3}
                                     title="Painel de Alertas"
-                                    description="Visualize o histórico completo de todos os alertas gerados pelo sistema."
+                                    description="Resumo da rede, equipamentos online/offline e alertas com diagnóstico da IA (LPM vazamento, custo aproximado)."
                                 />
                             </div>
                         </div>

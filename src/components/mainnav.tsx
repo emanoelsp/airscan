@@ -109,6 +109,7 @@ const clientNav: NavItem[] = [
     href: "/painel/alertas",
     icon: Bell,
     submenu: [
+      { name: "Painel de Alertas", href: "/painel/alertas/painel" },
       { name: "Configurar Contatos", href: "/painel/alertas/configurar-contatos" },
       { name: "Configurar Limites", href: "/painel/alertas/configurar-limites" },
     ],

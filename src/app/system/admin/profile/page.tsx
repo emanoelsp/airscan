@@ -10,9 +10,10 @@ import {
   Database,
   Network,
   KeyRound,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/lib/controllers/authcontroller";
+import { useAuth, authController } from "@/lib/controllers/authcontroller";
 import accountsController, {
   Account,
   UpdateAccountData,
@@ -119,6 +120,20 @@ export default function AdminProfilePage() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const rawData = Object.fromEntries(formData.entries());
+    const newPassword = String(rawData.newPassword ?? "").trim();
+    const confirmPassword = String(rawData.confirmPassword ?? "").trim();
+
+    if (newPassword || confirmPassword) {
+      if (newPassword.length < 6) {
+        AccountAlerts.showError("A nova senha deve ter no mínimo 6 caracteres.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        AccountAlerts.showError("A confirmação da senha não confere.");
+        return;
+      }
+    }
+
     const updateData: UpdateAccountData = {
       contactName: String(rawData.contactName),
       phone: String(rawData.phone),
@@ -126,16 +141,19 @@ export default function AdminProfilePage() {
       address: String(rawData.address),
       compressorCount: Number(rawData.compressorCount),
       networkDescription: String(rawData.networkDescription),
-      login: String(rawData.login),
+      // login não é enviado: campo desabilitado (somente leitura)
     };
     setSaving(true);
     try {
       await accountsController.updateAccount(account.id, updateData);
+      if (newPassword) await authController.updatePassword(newPassword);
       await refreshAccount();
       AccountAlerts.showSuccess("Perfil atualizado com sucesso!");
     } catch (error) {
       console.error(error);
-      AccountAlerts.showError("Erro ao atualizar o perfil.");
+      AccountAlerts.showError(
+        error instanceof Error ? error.message : "Erro ao atualizar o perfil."
+      );
     } finally {
       setSaving(false);
     }
@@ -251,14 +269,38 @@ export default function AdminProfilePage() {
             <h2 className="text-lg font-semibold text-white border-b border-white/10 pb-3 mb-4">
               Acesso
             </h2>
-            <InputField
-              icon={KeyRound}
-              id="login"
-              name="login"
-              label="Login"
-              placeholder="seu.login"
-              defaultValue={account.login}
-            />
+            <p className="text-sm text-slate-400 mb-4">
+              Login não pode ser alterado. Para trocar a senha, preencha os campos abaixo.
+            </p>
+            <div className="space-y-4">
+              <InputField
+                icon={KeyRound}
+                id="login"
+                name="login"
+                label="Login (somente leitura)"
+                placeholder="seu.login"
+                defaultValue={account.login}
+                disabled
+              />
+              <InputField
+                icon={Lock}
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                label="Senha"
+                placeholder="Nova senha (mín. 6 caracteres) — deixe em branco para não alterar"
+                required={false}
+              />
+              <InputField
+                icon={Lock}
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                label="Confirmar senha"
+                placeholder="Repita a nova senha"
+                required={false}
+              />
+            </div>
           </div>
 
           <div className="pt-4 flex justify-end gap-3">

@@ -111,8 +111,8 @@ export function Header({ children }: { children: React.ReactNode }) {
         {/* Barra superior móvel: logo à esquerda, ícone usuário à direita (só em mobile) */}
         <MobileTopBar account={account} onLogout={handleLogout} />
 
-        {/* Conteúdo: padding-top no mobile para a barra superior; padding-bottom no mobile para o menu inferior; padding-left no desktop para a sidebar */}
-        <main className="pt-14 pb-24 md:pt-0 md:pb-0 md:pl-64 min-h-screen bg-slate-900">
+        {/* Conteúdo: ocupa no mínimo 100% da altura da tela para evitar barra branca no final */}
+        <main className="pt-14 pb-24 md:pt-0 md:pb-0 md:pl-64 min-h-screen min-h-[100dvh] flex flex-col bg-slate-900">
           {children}
         </main>
 
