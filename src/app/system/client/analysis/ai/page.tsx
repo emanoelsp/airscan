@@ -111,18 +111,30 @@ export default function ClientDiagnosticoIAPage() {
     {} as Record<string, number>
   );
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
+    const logoData = await getLogoDataUrl().catch(() => null);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    let y = 14;
+    if (logoData) {
+      doc.addImage(logoData, "PNG", 14, 8, 45, 12);
+      y = 26;
+    }
     doc.setFontSize(16);
-    doc.text("Diagnóstico de IA", 14, 20);
+    doc.text("Diagnóstico de IA", 14, y);
+    y += 8;
     doc.setFontSize(10);
-    doc.text(`Período: ${period === "day" ? "Último dia" : period === "week" ? "Última semana" : "Último mês"}`, 14, 28);
-    doc.text(`Rede: ${networkId === "all" ? "Todas" : networks.find((n) => n.id === networkId)?.name ?? networkId}`, 14, 34);
-    doc.text(`Equipamento: ${assetId === "all" ? "Todos" : assets.find((a) => a.id === assetId)?.name ?? assetId}`, 14, 40);
-    doc.text(`Severidade: ${severidade === "all" ? "Todas" : severidade}`, 14, 46);
-    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, 52);
-    doc.setFontSize(10);
-    doc.text(`Total de eventos: ${totalEventos}  |  Custo total: R$ ${custoTotal.toFixed(2)}`, 14, 60);
+    doc.text(`Período: ${period === "day" ? "Último dia" : period === "week" ? "Última semana" : "Último mês"}`, 14, y);
+    y += 6;
+    doc.text(`Rede: ${networkId === "all" ? "Todas" : networks.find((n) => n.id === networkId)?.name ?? networkId}`, 14, y);
+    y += 6;
+    doc.text(`Equipamento: ${assetId === "all" ? "Todos" : assets.find((a) => a.id === assetId)?.name ?? assetId}`, 14, y);
+    y += 6;
+    doc.text(`Severidade: ${severidade === "all" ? "Todas" : severidade}`, 14, y);
+    y += 6;
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, y);
+    y += 6;
+    doc.text(`Total de eventos: ${totalEventos}  |  Custo total: R$ ${custoTotal.toFixed(2)}`, 14, y);
+    y += 8;
     const tableData = data.map((row) => [
       row.dataInicio ? new Date(row.dataInicio).toLocaleString("pt-BR") : "—",
       row.dataFim ? new Date(row.dataFim).toLocaleString("pt-BR") : "—",
@@ -133,7 +145,7 @@ export default function ClientDiagnosticoIAPage() {
       row.custo_estimado != null ? `R$ ${Number(row.custo_estimado).toFixed(2)}` : "—",
     ]);
     autoTable(doc, {
-      startY: 66,
+      startY: y,
       head: [["Início", "Fim", "Equipamento", "LPM", "Severidade", "Duração (min)", "Custo est."]],
       body: tableData,
       theme: "grid",

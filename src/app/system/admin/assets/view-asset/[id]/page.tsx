@@ -260,31 +260,7 @@ function ViewAssetPage() {
             else setConsumptionStatus('anomaly');
 
             if (result.action === 'created') showError(`Vazamento confirmado em ${currentAsset.name}!`);
-
-            // Grava diagnóstico na collection airscan_diagnostico_ia (rede + equipamento)
-            if (result.action === 'created' || result.action === 'updated') {
-              const startTime = leakStartTimeRef.current ?? now;
-              addDoc(collection(db, "airscan_diagnostico_ia"), {
-                networkId: currentAsset.networkId,
-                assetId: currentAsset.id,
-                assetName: currentAsset.name,
-                dataInicio: new Date(startTime).toISOString(),
-                dataFim: new Date(now).toISOString(),
-                lpm: newData.lpm_vazamento,
-                severidade: result.severity,
-                pressao: newData.pressao,
-                mse: newData.mse,
-                uncertainty: newData.uncertainty,
-                drift: newData.drift,
-                gap: newData.gap,
-                threshold: newData.threshold,
-                status_sistema: newData.status_sistema,
-                is_anomaly: true,
-                duracao_minutos: durationMin,
-                custo_estimado: (newData.lpm_vazamento * 350 / (365 * 24)) * (durationMin / 60),
-                timestamp: serverTimestamp(),
-              }).catch(() => {});
-            }
+            // airscan_diagnostico_ia: um único doc por vazamento é gravado ao finalizar (resolveLeak)
         } else {
             if (leakDbIdRef.current) {
                 await leakController.resolveLeak(leakDbIdRef.current);

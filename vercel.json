@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-readings",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-old-readings",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

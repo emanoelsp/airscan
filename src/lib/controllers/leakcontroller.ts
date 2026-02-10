@@ -2,6 +2,7 @@ import { db } from "@/lib/firebase/firebaseconfig";
 import {
   collection,
   addDoc,
+  getDoc,
   Timestamp,
   query,
   where,
@@ -115,18 +116,46 @@ const leakController = {
     }
   },
 
-  // --- FINALIZAÇÃO ---
+  /**
+   * Finaliza o vazamento e grava um único documento em airscan_diagnostico_ia com
+   * dataInicio, dataFim, LPM, custo em R$ e demais métricas do vazamento.
+   */
   async resolveLeak(dbId: string) {
     if (!dbId) return;
     try {
-        const leakRef = doc(db, "airscan_leaks", dbId);
-        await updateDoc(leakRef, {
-            status: 'resolved',
-            endTime: Timestamp.now()
+      const leakRef = doc(db, "airscan_leaks", dbId);
+      const leakSnap = await getDoc(leakRef);
+      if (leakSnap.exists()) {
+        const d = leakSnap.data();
+        const startTime = d.startTime?.toMillis?.() ?? 0;
+        const now = Date.now();
+        const dataInicio = new Date(startTime).toISOString();
+        const dataFim = new Date(now).toISOString();
+        const duracao_minutos = (now - startTime) / 60000;
+        const lpm = Number(d.lpm ?? 0);
+        const custoHora = Number(d.custo_hora ?? 0);
+        const custo_estimado = custoHora * (duracao_minutos / 60);
+        const severidade = d.severity ?? "moderate";
+
+        await addDoc(collection(db, "airscan_diagnostico_ia"), {
+          networkId: d.networkId ?? "",
+          assetId: d.assetId ?? "",
+          assetName: d.assetName ?? "",
+          dataInicio,
+          dataFim,
+          lpm,
+          severidade,
+          duracao_minutos,
+          custo_estimado,
+          timestamp: serverTimestamp(),
         });
-        console.log(`Vazamento ${dbId} finalizado.`);
+      }
+      await updateDoc(leakRef, {
+        status: "resolved",
+        endTime: Timestamp.now(),
+      });
     } catch (error) {
-        console.error("Erro ao resolver vazamento:", error);
+      console.error("Erro ao resolver vazamento:", error);
     }
   },
 

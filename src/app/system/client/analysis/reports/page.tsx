@@ -69,22 +69,23 @@ export default function ClientReportsPage() {
     startDate.setDate(startDate.getDate() - days);
     const startTimestamp = Timestamp.fromDate(startDate);
 
+    // Only use timestamp + assetId in query to avoid extra composite indexes (filter networkId in memory)
     const constraints = [where("timestamp", ">=", startTimestamp)];
-    if (selectedNetworkId !== "all") constraints.push(where("networkId", "==", selectedNetworkId));
     if (selectedAssetId !== "all") constraints.push(where("assetId", "==", selectedAssetId));
 
     getDocs(query(collection(db, "airscan_dados_ia"), ...constraints))
       .then((snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
+        let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
         const clientNetworkIds = new Set(networks.length ? networks.map((n) => n.id) : []);
-        const filtered = clientNetworkIds.size ? rows.filter((r) => clientNetworkIds.has(String(r.networkId))) : rows;
-        filtered.sort((a, b) => {
+        if (clientNetworkIds.size) rows = rows.filter((r) => clientNetworkIds.has(String(r.networkId)));
+        if (selectedNetworkId !== "all") rows = rows.filter((r) => String(r.networkId) === selectedNetworkId);
+        rows.sort((a, b) => {
           const ta = a.timestamp as Timestamp | undefined;
           const tb = b.timestamp as Timestamp | undefined;
           if (!ta || !tb) return 0;
           return tb.toMillis() - ta.toMillis();
         });
-        setData(filtered);
+        setData(rows);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));

@@ -58,13 +58,16 @@ export default function ReportsPage() {
     startDate.setDate(startDate.getDate() - days);
     const startTimestamp = Timestamp.fromDate(startDate);
 
+    // Only use timestamp + assetId in query to avoid extra composite indexes (filter networkId in memory)
     const constraints = [where("timestamp", ">=", startTimestamp)];
-    if (selectedNetworkId !== "all") constraints.push(where("networkId", "==", selectedNetworkId));
     if (selectedAssetId !== "all") constraints.push(where("assetId", "==", selectedAssetId));
 
     getDocs(query(collection(db, "airscan_dados_ia"), ...constraints))
       .then((snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
+        let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
+        if (selectedNetworkId !== "all") {
+          rows = rows.filter((r) => String(r.networkId) === selectedNetworkId);
+        }
         rows.sort((a, b) => {
           const ta = a.timestamp as Timestamp | undefined;
           const tb = b.timestamp as Timestamp | undefined;
