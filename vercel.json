@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-readings",
-      "schedule": "* * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/cleanup-old-readings",

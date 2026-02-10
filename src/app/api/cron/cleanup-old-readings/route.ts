@@ -16,6 +16,8 @@ import {
 
 const RETENTION_DAYS = 60;
 const BATCH_SIZE = 500;
+/** Cap deletes per run for Firebase free tier (20K deletes/day). Leaves room for other ops. */
+const MAX_DELETES_PER_RUN = 5000;
 
 function checkCronAuth(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -39,8 +41,8 @@ export async function GET(request: NextRequest) {
     const col = collection(db, "airscan_dados_ia");
     let totalDeleted = 0;
 
-    // Delete in batches (Firestore limit 500 per batch)
-    while (true) {
+    // Delete in batches (Firestore limit 500 per batch). Cap total for free tier (20K deletes/day).
+    while (totalDeleted < MAX_DELETES_PER_RUN) {
       const q = query(col, where("timestamp", "<", cutoffTimestamp), limit(BATCH_SIZE));
       const snapshot = await getDocs(q);
       if (snapshot.empty) break;

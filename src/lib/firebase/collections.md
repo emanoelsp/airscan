@@ -1,12 +1,14 @@
 # Firestore collections – leituras e diagnóstico
 
+Para otimizações voltadas ao **plano free do Firebase** (leituras/escritas/exclusões), veja `FIREBASE-FREE-TIER.md`.
+
 ## airscan_dados_ia (leituras a cada 1 minuto)
 
 Usada para **leituras periódicas** dos equipamentos de cada rede. Alimenta a tela **Relatório de Consumo**.
 
 - **Quem grava**
-  - **Cron (recomendado):** `GET /api/cron/sync-readings` — chame a cada 1 minuto. No Vercel, use `vercel.json` (crons) e defina a variável `CRON_SECRET` no projeto; em outro provedor, use um cron externo com `?secret=CRON_SECRET` ou header `x-cron-secret`.
-  - **Admin (view-asset)** e **cliente (assets):** ao receber resposta da API do ativo, gravam também (comportamento atual).
+  - **Cron:** `GET /api/cron/sync-readings` — no Vercel está agendado **1x por dia** (2h) para funcionar no plano Hobby; no plano Pro você pode alterar em `vercel.json` para `* * * * *` e rodar a cada 1 minuto. Defina `CRON_SECRET` no projeto.
+  - **Admin (view-asset)** e **cliente (assets):** ao abrir a tela do equipamento, cada resposta da API também grava em `airscan_dados_ia` (dados em tempo real continuam sendo salvos ao usar o sistema).
 - **Campos do documento**
   - `networkId`, `assetId`, `assetName`
   - `timestamp` (serverTimestamp)

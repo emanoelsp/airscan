@@ -42,9 +42,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const networksSnap = await getDocs(collection(db, "airscan_networks"));
     const assetsSnap = await getDocs(collection(db, "airscan_assets"));
-    const networks = networksSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as { id: string; name?: string }[];
     const assets = assetsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as {
       id: string;
       networkId?: string;

@@ -120,6 +120,7 @@ export default function ClientDevicesPage() {
     const [chartRange, setChartRange] = useState(100);
     const leakStartTimeRef = useRef<number | null>(null);
     const pressureReadingsRef = useRef<number[]>([]);
+    const lastDadosIaWriteRef = useRef<number>(0);
 
     const has10ConsecutiveDecreasing = (readings: number[]): boolean => {
         if (readings.length < 11) return false;
@@ -266,25 +267,29 @@ export default function ClientDevicesPage() {
                 };
                 setRealTimeDataAI(newAI);
 
-                // Salva leitura da IA na collection airscan_dados_ia (rede + equipamento)
+                // Grava em airscan_dados_ia no máx. 1x por minuto (otimização plano free Firestore: 20K writes/dia)
                 if (selectedAsset?.id) {
-                  addDoc(collection(db, "airscan_dados_ia"), {
-                    networkId: selectedAsset.networkId,
-                    assetId: selectedAsset.id,
-                    assetName: selectedAsset.name,
-                    timestamp: serverTimestamp(),
-                    pressao: pressureValue,
-                    is_anomaly: isAnomaly,
-                    status_sistema: newAI.status_sistema,
-                    mse,
-                    uncertainty: newAI.uncertainty,
-                    drift: newAI.drift,
-                    lpm_vazamento: newAI.lpm_vazamento,
-                    gap: data.gap != null ? Number(data.gap) : 0,
-                    threshold,
-                    duracao_minutos: data.duracao_minutos != null ? Number(data.duracao_minutos) : 0,
-                    severidade: data.severidade ?? "normal",
-                  }).catch(() => {});
+                  const now = Date.now();
+                  if (now - lastDadosIaWriteRef.current >= 60000) {
+                    lastDadosIaWriteRef.current = now;
+                    addDoc(collection(db, "airscan_dados_ia"), {
+                      networkId: selectedAsset.networkId,
+                      assetId: selectedAsset.id,
+                      assetName: selectedAsset.name,
+                      timestamp: serverTimestamp(),
+                      pressao: pressureValue,
+                      is_anomaly: isAnomaly,
+                      status_sistema: newAI.status_sistema,
+                      mse,
+                      uncertainty: newAI.uncertainty,
+                      drift: newAI.drift,
+                      lpm_vazamento: newAI.lpm_vazamento,
+                      gap: data.gap != null ? Number(data.gap) : 0,
+                      threshold,
+                      duracao_minutos: data.duracao_minutos != null ? Number(data.duracao_minutos) : 0,
+                      severidade: data.severidade ?? "normal",
+                    }).catch(() => {});
+                  }
                 }
 
                 const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });

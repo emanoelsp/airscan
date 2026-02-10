@@ -7,7 +7,7 @@ import autoTable from "jspdf-autotable";
 import { getLogoDataUrl } from "@/lib/pdfLogo";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { db } from "@/lib/firebase/firebaseconfig";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, limit, Timestamp } from "firebase/firestore";
 
 interface Network {
   id: string;
@@ -58,11 +58,11 @@ export default function ReportsPage() {
     startDate.setDate(startDate.getDate() - days);
     const startTimestamp = Timestamp.fromDate(startDate);
 
-    // Only use timestamp + assetId in query to avoid extra composite indexes (filter networkId in memory)
+    // Limit reads for Firebase free tier (50K/day). Filter networkId in memory.
     const constraints = [where("timestamp", ">=", startTimestamp)];
     if (selectedAssetId !== "all") constraints.push(where("assetId", "==", selectedAssetId));
 
-    getDocs(query(collection(db, "airscan_dados_ia"), ...constraints))
+    getDocs(query(collection(db, "airscan_dados_ia"), ...constraints, limit(2000)))
       .then((snap) => {
         let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown>));
         if (selectedNetworkId !== "all") {

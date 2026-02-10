@@ -112,6 +112,7 @@ function ViewAssetPage() {
   const leakDbIdRef = useRef<string | null>(null);
   const leakStartTimeRef = useRef<number | null>(null);
   const pressureReadingsRef = useRef<number[]>([]);
+  const lastDadosIaWriteRef = useRef<number>(0);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   const has10ConsecutiveDecreasing = (readings: number[]): boolean => {
@@ -196,24 +197,28 @@ function ViewAssetPage() {
         setRealTimeData(newData);
         setIsOnline(true);
 
-        // Salva leitura da IA na collection airscan_dados_ia (rede + equipamento)
-        addDoc(collection(db, "airscan_dados_ia"), {
-          networkId: currentAsset.networkId,
-          assetId: currentAsset.id,
-          assetName: currentAsset.name,
-          timestamp: serverTimestamp(),
-          pressao: newData.pressao,
-          is_anomaly: newData.is_anomaly,
-          status_sistema: newData.status_sistema,
-          mse: newData.mse,
-          uncertainty: newData.uncertainty,
-          drift: newData.drift,
-          lpm_vazamento: newData.lpm_vazamento,
-          gap: newData.gap,
-          threshold: newData.threshold,
-          duracao_minutos: newData.duracao_vazamento_min,
-          severidade: data.severidade ?? "normal",
-        }).catch(() => {});
+        // Grava em airscan_dados_ia no máx. 1x por minuto (otimização plano free Firestore: 20K writes/dia)
+        const now = Date.now();
+        if (now - lastDadosIaWriteRef.current >= 60000) {
+          lastDadosIaWriteRef.current = now;
+          addDoc(collection(db, "airscan_dados_ia"), {
+            networkId: currentAsset.networkId,
+            assetId: currentAsset.id,
+            assetName: currentAsset.name,
+            timestamp: serverTimestamp(),
+            pressao: newData.pressao,
+            is_anomaly: newData.is_anomaly,
+            status_sistema: newData.status_sistema,
+            mse: newData.mse,
+            uncertainty: newData.uncertainty,
+            drift: newData.drift,
+            lpm_vazamento: newData.lpm_vazamento,
+            gap: newData.gap,
+            threshold: newData.threshold,
+            duracao_minutos: newData.duracao_vazamento_min,
+            severidade: data.severidade ?? "normal",
+          }).catch(() => {});
+        }
 
         setHistoryData(prev => {
             const pt = { time: newData.lastUpdate, pressao: newData.pressao, mse: newData.mse, limiar: newData.threshold };

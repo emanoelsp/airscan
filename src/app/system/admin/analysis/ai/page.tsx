@@ -14,7 +14,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getLogoDataUrl } from "@/lib/pdfLogo";
 import { db } from "@/lib/firebase/firebaseconfig";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, limit, Timestamp } from "firebase/firestore";
 
 interface Network {
   id: string;
@@ -75,7 +75,7 @@ export default function DiagnosticoIAPage() {
     if (assetId !== "all") constraints.push(where("assetId", "==", assetId));
     if (severidade !== "all") constraints.push(where("severidade", "==", severidade));
 
-    getDocs(query(collection(db, "airscan_diagnostico_ia"), ...constraints))
+    getDocs(query(collection(db, "airscan_diagnostico_ia"), ...constraints, limit(500)))
       .then((snap) => {
         let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as DiagnosticoRow));
         if (networkId !== "all") {
